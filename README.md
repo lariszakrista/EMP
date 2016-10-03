@@ -1,0 +1,2 @@
+# EMP
+Eclipse Megamovie Project
