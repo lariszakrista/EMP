@@ -1,0 +1,72 @@
+#!/usr/bin/python3
+#
+# Copyright 2016 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Script to visualize the data output by the record_ground_truth application.
+Use escape key to kill the application.
+"""
+
+import os
+import sys
+
+import cv2
+
+
+def main():
+    try:
+        fpath = sys.argv[1]
+    except IndexError:
+        print('Must pass path to output file as command line argument.')
+        return
+
+    with open(fpath) as f:
+        lines = [l.split('|') for l in f.readlines()]
+        data = [(l[0], l[2], l[3]) for l in lines]
+
+    for entry in data:
+        img = cv2.imread(entry[0])
+
+        for i in (1, 2):
+            circle = entry[i].strip().strip('()')
+
+            if circle == 'None':
+                continue
+
+            circle = [int(i) for i in circle.split(',')]
+
+            # Draw the circle on the image
+            cv2.circle(img, tuple(circle[:2]), circle[2], (0, 255, 0),
+                       thickness=2, lineType=8)
+
+        # Compute display dimensions
+        max_w, max_h = 1500, 1000
+        ratio = float(img.shape[1]) / img.shape[0]
+        if ratio > (max_w / max_h):
+            dims = max_w, int(max_w / ratio)
+        dims = int(ratio * max_h), max_h
+
+        cv2.imshow(entry[0], cv2.resize(img, dims))
+
+        key = cv2.waitKey(0)
+        cv2.destroyWindow(entry[0])
+
+        # ESC key
+        if key == 1048603:
+            return
+
+
+if __name__ == '__main__':
+    main()
