@@ -1,4 +1,8 @@
-This tool will run the image processor and summarize the results in an HTML file. To run the tool:
+This tool will run the image processor and summarize the results in an HTML file. This script 
+will take care of downloading the images from Google Cloud Storage and building the image processor.
+This tool assumes access to the `northamericaneclipseimages` Google Cloud Project
+
+To run the tool:
 
 ```bash
 $ ./test DIR
