@@ -5,8 +5,6 @@ import os
 import sys
 
 OUTPUT_FILE = "output.html"
-ORIGINAL_PATH = "/home/shared/eclipse_image_ground_truth_dataset_renamed/"
-PROCESSED_PATH = "/home/shared/output/"
 
 HTML = """
 <script defer src="https://code.getmdl.io/1.2.1/material.min.js"></script>
@@ -129,15 +127,20 @@ HTML = """
 
 def read_metadata(original_path, processed_path):
     
-    f = open(PROCESSED_PATH + "metadata.txt", 'r')
+    f = open(os.path.join(processed_path + "metadata.txt"), 'r')
 
     metadata_items = []
 
-    for line in f:
+    for line in f.readlines():
         tokens = line.split('|')
 
-        item = dict(image_name = tokens[0], original = os.path.join(original_path, tokens[0]), processed = os.path.join(processed_path, tokens[0]), sun_diff = tokens[1],
-                            moon_diff = tokens[2], pre_proc_time = tokens[3], hough_time = tokens[4])
+        item = dict(image_name = tokens[0], 
+                    original = os.path.join(original_path, tokens[0]), 
+                    processed = os.path.join(processed_path, tokens[0]), 
+                    sun_diff = tokens[1],
+                    moon_diff = tokens[2], 
+                    pre_proc_time = tokens[3], 
+                    hough_time = tokens[4])
 
         if tokens[5] == "1":
             item['discard_reasons'] = '<br>'.join(item.strip() for item in tokens[6].split(';'))
@@ -146,7 +149,7 @@ def read_metadata(original_path, processed_path):
 
     return metadata_items
     
-def build_html_doc(original_path, processed_path):
+def build_html_doc(original_path, processed_path, output_file_dir):
 
     #get all 40 characters of the commit hash
     commit_hash = str(subprocess.check_output("git rev-parse HEAD", shell=True))[2:42]
@@ -158,18 +161,18 @@ def build_html_doc(original_path, processed_path):
 
     metadata = read_metadata(original_path, processed_path)
 
-    f = open(OUTPUT_FILE, 'w')
+    f = open(os.path.join(output_file_dir, OUTPUT_FILE), 'w')
     f.write( Environment().from_string(HTML).render(title=page_title, 
                                                     gitrev=commit_hash, date=date_time, items=metadata) )
 
 def main():
 
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         print ("Please run this script in the form:")
-        print ("$python image_proc_output.py [/path/to/original/images] [/path/to/processed/images]")
+        print ("$python image_proc_output.py [/path/to/original/images] [/path/to/processed/images] [/output/html/dir]")
         return 
 
-    build_html_doc(sys.argv[1], sys.argv[2])
+    build_html_doc(sys.argv[1], sys.argv[2], sys.argv[3])
 
 if __name__ == '__main__':
 
