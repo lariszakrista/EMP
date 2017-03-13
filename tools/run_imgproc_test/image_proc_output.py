@@ -4,6 +4,7 @@ import time
 import os
 import sys
 
+METADATA_FILE = "metadata.txt"
 OUTPUT_FILE = "output.html"
 
 HTML = """
@@ -127,7 +128,7 @@ HTML = """
 
 def read_metadata(original_path, processed_path):
     
-    f = open(os.path.join(processed_path + "metadata.txt"), 'r')
+    f = open(os.path.join(processed_path, METADATA_FILE), 'r')
 
     metadata_items = []
 
