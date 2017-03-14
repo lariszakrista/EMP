@@ -3,8 +3,11 @@ from jinja2 import Environment, Template
 import time
 import os
 import sys
+from ast import literal_eval
+import math
 
 OUTPUT_FILE = "output.html"
+TRUTH_FILE = "image_data.txt"
 
 HTML = """
 <script defer src="https://code.getmdl.io/1.2.1/material.min.js"></script>
@@ -98,10 +101,15 @@ HTML = """
 							    <img src={{item.processed}}>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-							    {{item.sun_diff}}
+							    Center offset: <br>{{item.sun_center_diff}}<br>
+                                <br>
+                                Radius difference: <br>{{item.sun_rad_diff}}<br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-							    {{item.moon_diff}}
+                                {{ item.no_moon }}
+							    Center offset: <br>{{item.moon_center_diff}}<br>
+                                <br>
+                                Radius difference: <br>{{item.moon_rad_diff}}<br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
 							    {{item.pre_proc_time}}
@@ -125,7 +133,35 @@ HTML = """
 </html>
 """
 
+def calc_position_diff(result, truth):
+
+    result_pos = (result[0], result[1])
+    truth_pos = (truth[0], truth[1])
+
+    radius_diff = result[2] - truth[2]
+
+    center_offset = euclidean_distance(result_pos, truth_pos)
+
+    return center_offset, radius_diff
+
+def euclidean_distance(circle1, circle2):
+
+	dx = circle1[0] - circle2[0]
+	dy = circle1[1] - circle2[1]
+
+	return math.sqrt((dx ** 2) + (dy ** 2))
+
 def read_metadata(original_path, processed_path):
+
+    truth_file = open(os.path.join(original_path + TRUTH_FILE), 'r')
+
+    truth_positions = {}
+    for line in truth_file:
+        tokens = line.split('|')
+
+        position = dict(sun = literal_eval(tokens[2]), moon = literal_eval(tokens[3]))
+
+        truth_positions[tokens[0]] = position
     
     f = open(os.path.join(processed_path + "metadata.txt"), 'r')
 
@@ -137,10 +173,24 @@ def read_metadata(original_path, processed_path):
         item = dict(image_name = tokens[0], 
                     original = os.path.join(original_path, tokens[0]), 
                     processed = os.path.join(processed_path, tokens[0]), 
-                    sun_diff = tokens[1],
-                    moon_diff = tokens[2], 
                     pre_proc_time = tokens[3], 
                     hough_time = tokens[4])
+
+        
+        if truth_positions[tokens[0]]['moon'] is not None:
+            moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2]), truth_positions[tokens[0]]['moon'])
+            item['moon_center_diff'] = moon_center_offset
+            item['moon_rad_diff'] = moon_radius_diff
+        else:
+            item['moon_center_diff'] = "No Moon in ground truth"
+            item['moon_rad_diff'] = "No Moon in ground truth"
+
+        sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1]), truth_positions[tokens[0]]['sun'])
+
+        item['sun_center_diff'] = sun_center_offset
+        item['sun_rad_diff'] = sun_radius_diff
+
+         
 
         if tokens[5] == "1":
             item['discard_reasons'] = '<br>'.join(item.strip() for item in tokens[6].split(';'))
