@@ -1,7 +1,7 @@
 set "-e"
 
-if [ $# != 1 ]; then
-    echo "Must pass image_dir as argument"
+if [ $# = 0 ]; then
+    echo "Usage: test image_dir [download]"
     exit
 fi
 
@@ -11,10 +11,19 @@ SRC_IMG_DIR=$BASE_DIR/$SRC_IMG_BUCKET
 SRC_IMG_FILE=$SRC_IMG_DIR/images.txt
 OUTPUT_DIR=$BASE_DIR/output
 
-mkdir $SRC_IMG_DIR
-echo "Saving images from GCS to $SRC_IMG_DIR..."
-gsutil cp "gs://$SRC_IMG_BUCKET/*" $SRC_IMG_DIR
-cat $SRC_IMG_DIR/image_data.txt | cut -d "|" -f 1 > $SRC_IMG_FILE
+if [ ! -d $SRC_IMG_DIR ]; then
+    
+    if [ $2 = download ]; then
+        mkdir $SRC_IMG_DIR
+        echo "Saving images from GCS to $SRC_IMG_DIR..."
+        gsutil -m cp "gs://$SRC_IMG_BUCKET/*" $SRC_IMG_DIR
+        cat $SRC_IMG_DIR/image_data.txt | cut -d "|" -f 1 > $SRC_IMG_FILE
+    else
+        echo "Directory: $SRC_IMG_DIR not found."
+        echo "Run with the optional download parameter to download images"
+        exit
+    fi
+fi
 
 echo "Running image processor..."
 mkdir $OUTPUT_DIR

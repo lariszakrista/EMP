@@ -76,16 +76,16 @@ HTML = """
 							    Processed
 						    </th>
 						    <th class="mdl-data-table__cell--non-numeric">
-							    Sun Diff
+							    Sun Diff (px)
 						    </th>
 						    <th class="mdl-data-table__cell--non-numeric">
-							    Moon Diff
+							    Moon Diff (px)
 						    </th>
 						    <th class="mdl-data-table__cell--non-numeric">
-							    Pre-process time
+							    Pre-process time (secs)
 						    </th>
                     				<th class="mdl-data-table__cell--non-numeric">
-							    Hough time
+							    Hough time (secs)
 						    </th>
                     				<th class="mdl-data-table__cell--non-numeric">
 							    Discarded Reasons
@@ -154,7 +154,7 @@ def euclidean_distance(circle1, circle2):
 
 def read_metadata(original_path, processed_path):
 
-    truth_file = open(os.path.join(original_path + TRUTH_FILE), 'r')
+    truth_file = open(os.path.join(original_path, TRUTH_FILE), 'r')
 
     truth_positions = {}
     for line in truth_file:
