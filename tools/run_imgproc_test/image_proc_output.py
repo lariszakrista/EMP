@@ -6,6 +6,7 @@ import sys
 from ast import literal_eval
 import math
 
+METADATA_FILE = "metadata.txt"
 OUTPUT_FILE = "output.html"
 TRUTH_FILE = "image_data.txt"
 
@@ -163,7 +164,7 @@ def read_metadata(original_path, processed_path):
 
         truth_positions[tokens[0]] = position
     
-    f = open(os.path.join(processed_path + "metadata.txt"), 'r')
+    f = open(os.path.join(processed_path, METADATA_FILE), 'r')
 
     metadata_items = []
 
