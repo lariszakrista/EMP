@@ -19,267 +19,255 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 
-#define FULL_DISK_INTESITY_THRESH_FACTOR    10.0f
-#define MAX_CIRCLE_DIFF_SCALAR              0.3
-#define RADIUS_CROP_FACTOR                  4
+#define METADATA_FILE_NAME                  "metadata.txt"
+#define MIN_SUN_RADIUS                      50
 #define HD_MAX_W                            1920
 #define HD_MAX_H                            1080
-#define WINDOW_WIDTH                        1000
-
-
-enum EclipseView {
-    FULL_DISK = 0,
-    CRESCENT,
-    TOTALITY,
-    INVALID
-};
+#define ESC_KEY                             1048603
 
 
 using namespace cv;
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::ifstream;
+using std::ofstream;
+using std::string;
+using std::stringstream;
 using std::vector;
 
 
-float avgBWImagePixelValue(const Mat &image);
+struct ProcessedImageMetadata {
 
-float avgBWImagePixelValueInCircle(const Mat &image, const Vec3f &circle);
+    string filename;
+    Vec3f *circle1;
+    Vec3f *circle2;
+    double preprocess_secs;
+    double hough_secs;
+    bool   discard;
+    string discard_reasons;
+};
 
-void computeCircles(Mat &image, vector<Vec3f> &circles, double c1, double c2);
 
-void cropAroundSolarDisk(const Mat &src, Mat &dest, Vec3f disk);
+enum ImgprocMode {
+    BATCH = 0,
+    WINDOW,
+};
 
-void displayImageWithCircles(Mat &image, vector<Vec3f> &circles, String filepath);
 
-void displayImageWith2Circles(Mat image, Vec3f circle1, Vec3f circle2,
-                              String filepath);
+void computeCircles(Mat &image, vector<Vec3f> &circles, double c1, double c2, 
+                    ProcessedImageMetadata &metadata, ImgprocMode mode,
+                    vector<Mat> &intermediate_images, vector<string> &intermediate_image_names);
 
-EclipseView getImageType(const Mat &image, const Vec3f &circle1, const Vec3f &circle2);
+string getCircleTuple(const Vec3f &c);
 
-void preprocessImage(const Mat &image, Mat &gray);
+void outputProcessedImage(vector<Mat> &images, vector<string> &image_names, 
+                          const string &output_dir, ofstream &metadata_file, 
+                          ProcessedImageMetadata &metadata, ImgprocMode mode);
+
+void preprocessImage(const Mat &image, Mat &gray, ProcessedImageMetadata &metadata, ImgprocMode mode,
+                     vector<Mat> &intermediate_images, vector<string> &intermediate_image_names);
 
 Vec3f rescaleCircle(const Vec3f &circle, const Mat &image);
 
 std::pair<int, int> getRescaledDimensions(const Mat &image, int max_w, int max_h);
 
-void runAlgorithm(std::string filepath);
+void runAlgorithm(const string &input_dir, const string &filename, ImgprocMode mode, 
+                  const string &output_dir, ofstream &metadata_file);
+
+void writeImageMetadata(ProcessedImageMetadata &metadata, ofstream &metadata_file);
 
 
 int main(int argc, char **argv) {
 
+    ImgprocMode mode;
     int key;
-    std::ifstream f;
+    ifstream f;
+    ofstream metadata_file;
+    string valid_modes, input_file, input_dir, mode_str, output_dir;
 
-    if (argc < 2) {
-        cerr << "Must pass in images file as command line arg" << endl;
+    valid_modes = "[batch, window]";
+
+    if (argc < 4) {
+        cerr << "Usage:\n\t$ ./imgproc images_file input_dir mode [output_dir]" << endl;
+        cerr << endl << "Modes:\t" << valid_modes << "\n";
+        cerr << "\toutput_dir required when run in batch mode\n" << endl;
         return -1;
     }
 
-    f.open(argv[1]);
-    if (!f.is_open()) {
-        cerr << "Could not open images file " << argv[1] << endl;
+    input_file = argv[1];
+    input_dir  = argv[2];
+    mode_str   = argv[3];
+    
+    if (mode_str == "batch")
+    {
+        mode       = BATCH;
+        output_dir = argv[4];
+    }
+    else if (mode_str == "window")
+    {
+        mode = WINDOW;
+    }
+    else
+    {
+        cerr << "Invalid mode: " << mode_str << ". Valid modes: " << valid_modes << endl;
+        return -1;
     }
 
-    for (std::string filepath; std::getline(f, filepath);) {
+    // Add trailing slash to dir path if necessary
+    input_dir += input_dir[input_dir.size() - 1] == '/' ? "" : "/";
 
-        runAlgorithm(filepath);
-        key = waitKey(0);
-        destroyAllWindows();
+    if (mode == BATCH)
+    {
+        // Add trailing slash to dir path if necessary
+	    output_dir += output_dir[output_dir.size() - 1] == '/' ? "" : "/";
 
-        // ESC key
-        if (key == 1048603) {
-            break;
+        metadata_file.open(string(output_dir + METADATA_FILE_NAME).c_str(), std::ofstream::out);
+        if (!metadata_file.is_open()) {
+            cerr << "Could not open metadata file " << output_dir + METADATA_FILE_NAME << endl;
+            return -1;
         }
+    }
+
+    f.open(input_file.c_str(), std::ifstream::in);
+    if (!f.is_open()) {
+        cerr << "Could not open images file " << input_file << endl;
+        return -1;
+    }
+
+    for (string filename; std::getline(f, filename);) {
+
+        runAlgorithm(input_dir, filename, mode, output_dir, metadata_file);
+
+        if (mode == WINDOW)
+        {
+            key = waitKey(0);
+            destroyAllWindows();
+
+            // ESC key
+            if (key == ESC_KEY) {
+                break;
+            }
+        }            
     }
 
     f.close();
 
+    if (mode == BATCH)
+    {
+        metadata_file.close();
+    }
+
     return 0;
 }
 
-float avgBWImagePixelValue(const Mat &image) {
-    float                   avg;
-    const unsigned char    *row;
-    unsigned long           sum = 0;
 
-    for (int i = 0; i < image.rows; i++) {
-
-        row = image.ptr<uchar>(i);
-
-        for (int j = 0; j < image.cols; j++) {
-            sum += row[j];
-        }
-    }
-    avg = (float) sum / (float) (image.rows * image.cols);
-
-    // DEBUG
-    cout << "OVERALL INTENSITY " << sum << " Avg: " << avg << endl;
-
-    return avg;
-}
-
-float avgBWImagePixelValueInCircle(const Mat &image, const Vec3f &circle) {
-    float                   avg;
-    int                     center_x, center_y, r, r2, d, square_x, square_y,
-                            dx, dy, dy2, count = 0;
-    const unsigned char    *row;
-    unsigned long           sum = 0;
-
-    center_x    = (int) circle[0];
-    center_y    = (int) circle[1];
-    r           = (int) circle[2];
-    r2          = r * r;
-    d           = 2 * r;
-    square_x    = center_x - r;
-    square_y    = center_y - r;
-
-    for (int i = square_y; i < square_y + d; i++) {
-
-        dy  = abs(center_y - i);
-        dy2 = dy * dy;
-        row = image.ptr<uchar>(i);
-
-        for (int j = square_x; j < square_x + d; j++) {
-
-            dx = abs(center_x - j);
-
-            // First check if the point is within a square diamond inscribed in
-            // the circle and possibly short circuit. Otherwise check if it is
-            // in the circle, i.e. sqrt(dy**2 + dx**2) <= r
-            // <=>  (dy**2 + dx**2) <= r**2
-            if ((dx + dy) <= r || (dy2 + (dx * dx)) <= r2) {
-                sum += row[j];
-                count++;
-            }
-        }
-    }
-    avg = (float) sum / (float) count;
-
-    // DEBUG
-    cout << "CIRCLE INTENSITY Sum: " << sum << " Avg: " << avg << endl;
-
-    return avg;
-}
-
-void computeCircles(Mat &image, vector<Vec3f> &circles, double c1, double c2) {
-
-    // Previously used 80, 52 however seems to be slightly more performant
-    // double canny_param1 = 52;
-    time_t t1;
-
-    t1 = std::clock();
+void computeCircles(Mat &image, vector<Vec3f> &circles, double c1, double c2, 
+                    ProcessedImageMetadata &metadata, ImgprocMode mode,
+                    vector<Mat> &intermediate_images, vector<string> &intermediate_image_names) {
+    
+    time_t t = std::clock();
     HoughCircles(image, circles, CV_HOUGH_GRADIENT, 2,
-                //  image.rows/8, canny_param1, 0.5 * canny_param1, 0, 0);
-                image.rows/8, c1, c2, 0, 0);
+                 image.rows / 8, c1, c2, 0, 0);
+    t = std::clock() - t;
 
-    t1 = std::clock() - t1;
-
-    double sec = (double) t1 / (double) CLOCKS_PER_SEC;
+    metadata.hough_secs = (double) t / (double) CLOCKS_PER_SEC;
     cout << "Found " << circles.size() << " circles in "
-         << sec << " seconds." << endl;
-}
+         << metadata.hough_secs << " seconds." << endl;
 
-bool cropAroundSolarDisk(Mat &src, Mat &dest, Vec3f disk) {
-    bool success;
-    Rect border;
-
-    border.width    = RADIUS_CROP_FACTOR * disk[2];
-    border.height   = border.width;
-    border.x        = disk[0] - (border.width  / 2);
-    border.y        = disk[1] - (border.height / 2);
-
-    success = (border.x + border.width)  <= src.cols &&
-              (border.y + border.height) <= src.rows &&
-              border.x >= 0 && border.y >= 0;
-
-    cout << border.x << " " << border.y << " " << border.width << " " << border.height << endl;
-
-    if (success) {
-        dest = src(border);
+    if (mode == WINDOW)
+    {
+        Mat canny;
+        // Mimics call to cv::Canny on line 1322 in
+        // https://github.com/opencv/opencv/blob/master/modules/imgproc/src/canny.cpp
+        // made by cvCanny, which is called by icvHoughCirclesGradient in 
+        // https://github.com/opencv/opencv/blob/master/modules/imgproc/src/hough.cpp
+        // on line 1030. calls to cv::HoughCircles eventually boil down to calls to     
+        // icvHoughCirclesGradient 
+        Canny(image, canny, MAX(c1 / 2, 1), c1, 3, false);
+        intermediate_images.push_back(canny);
+        intermediate_image_names.push_back("Canny edges");
     }
-
-    return success;
 }
 
-void displayImageWith2Circles(Mat image, Vec3f circle1, Vec3f circle2,
-                              String filepath) {
+
+string getCircleTuple(const Vec3f &c) {
+    stringstream ret;
+    ret << "(" << c[0] << "," << c[1] << "," << c[2] << ")";
+    return ret.str();
+}
+
+
+void outputProcessedImage(vector<Mat> &images, vector<string> &image_names, 
+                          const string &output_dir, ofstream &metadata_file, 
+                          ProcessedImageMetadata &metadata, ImgprocMode mode) {
+    
     int                 radius;
     Point               center;
+    Vec3f               circle1, circle2;
     std::pair<int, int> dimensions;
+
+    circle1 = *(metadata.circle1);
+    circle2 = *(metadata.circle2);
 
     // Convert the BW image to color so that we can overlay colored circles on
     // it
-    if (image.channels() == 1) {
-        cvtColor(image, image, CV_GRAY2BGR);
+    if (images[0].channels() == 1) {
+        cvtColor(images[0], images[0], CV_GRAY2BGR);
     }
 
     // Display circle1
     center      = Point(cvRound(circle1[0]), cvRound(circle1[1]));
     radius      = cvRound(circle1[2]);
-    circle(image, center, 3, Scalar(255, 0, 0), -1, 8, 0);
-    circle(image, center, radius, Scalar(255, 0, 0), 4, 8, 0);
+    circle(images[0], center, 3, Scalar(255, 0, 0), -1, 8, 0);
+    circle(images[0], center, radius, Scalar(255, 0, 0), 4, 8, 0);
 
     // Display circle2
     center      = Point(cvRound(circle2[0]), cvRound(circle2[1]));
     radius      = cvRound(circle2[2]);
-    circle(image, center, 3, Scalar(255, 0, 0), -1, 8, 0);
-    circle(image, center, radius, Scalar(0, 255, 0), 4, 8, 0);
+    circle(images[0], center, 3, Scalar(255, 0, 0), -1, 8, 0);
+    circle(images[0], center, radius, Scalar(0, 255, 0), 4, 8, 0);
 
-    dimensions = getRescaledDimensions(image, HD_MAX_W, HD_MAX_H);
-    resize(image, image, Size(dimensions.first, dimensions.second));
-
-    namedWindow(filepath, CV_WINDOW_AUTOSIZE);
-    imshow(filepath, image);
+    if (mode == BATCH)
+    {
+        try {
+            imwrite(output_dir + metadata.filename, images[0]);
+        }
+        catch (Exception &ex) {
+            cerr << "Exception converting saving image " << (output_dir + metadata.filename) << " ";
+            cerr << ex.what() << endl;
+            return;
+        }
+        writeImageMetadata(metadata, metadata_file);
+    }
+    else if (mode == WINDOW)
+    {
+        // Iterate in reverse so that the original image with overlayed circles is shown
+        // at top of window "stack" 
+        for (int i = images.size() - 1; i >= 0; i--)
+        {
+            imshow(image_names[i], images[i]);
+        }
+    }
 }
 
-EclipseView getImageType(const Mat &image, const Vec3f &circle1, const Vec3f &circle2) {
-    bool    same_center, crescent = true;
-    float   distance, overall_intensity, disk_intensity;
 
-    // Euclidian distance between circle centers
-    distance        = sqrt(pow(circle1[0] - circle2[0], 2) +
-                           pow(circle1[1] - circle2[1], 2));
-    same_center     = (circle1[0] == circle2[0]) && (circle1[1] == circle2[1]);
-
-    // If the image is of a crescent, the two circles' radii must be within
-    // (100 * MAX_CIRCLE_DIFF_SCALAR)% of each other
-    crescent &= (circle2[2] > (1 - MAX_CIRCLE_DIFF_SCALAR) * circle1[2] &&
-                 circle2[2] <= circle1[2]) ||
-                (circle1[2] > (1 - MAX_CIRCLE_DIFF_SCALAR) * circle2[2] &&
-                 circle1[2] <= circle2[2]);
-
-    // If the circles do not overlap then we cannot have a crescent
-    crescent &= distance < (circle1[2] + circle2[2]);
-
-    // If the image is og a crescent, the circles cannot share a center point
-    crescent &= !same_center;
-
-    if (crescent) {
-        return CRESCENT;
-    }
-
-    overall_intensity   = avgBWImagePixelValue(image);
-    disk_intensity      = avgBWImagePixelValueInCircle(image, circle1);
-
-    if (disk_intensity > (FULL_DISK_INTESITY_THRESH_FACTOR * overall_intensity)) {
-        return FULL_DISK;
-    }
-
-    // else
-    return TOTALITY;
-}
-
-void preprocessImage(const Mat &image, Mat &gray) {
+// Pass preprocessImage the images and image_names vectors so it can add intermediate
+// images to them to be displayed in window mode.
+void preprocessImage(const Mat &image, Mat &gray, ProcessedImageMetadata &metadata, ImgprocMode mode,
+                     vector<Mat> &intermediate_images, vector<string> &intermediate_image_names) {
 
     Mat blurred;
     std::pair<int, int> dimensions;
+
+    time_t t = std::clock();
 
     // Convert image to black and white
     cvtColor(image, gray, CV_BGR2GRAY);
@@ -295,7 +283,11 @@ void preprocessImage(const Mat &image, Mat &gray) {
     // Blur final image to reduce noise
     // GaussianBlur(gray, gray, Size(9, 9), 30, 30);
     medianBlur(gray, gray, 11);
+
+    t = std::clock() - t;
+    metadata.preprocess_secs = (double) t / (double) CLOCKS_PER_SEC;
 }
+
 
 Vec3f rescaleCircle(const Vec3f &circle, const Mat &image) {
     double  factor;
@@ -313,6 +305,7 @@ Vec3f rescaleCircle(const Vec3f &circle, const Mat &image) {
     return rescaled;
 }
 
+
 std::pair<int, int> getRescaledDimensions(const Mat &image, int max_w, int max_h) {
 
     double given_ratio, ratio;
@@ -328,128 +321,71 @@ std::pair<int, int> getRescaledDimensions(const Mat &image, int max_w, int max_h
     return dimensions;
 }
 
-void runAlgorithm(std::string filepath) {
 
-    bool                        discard = false;
-    EclipseView                 image_type;
+void runAlgorithm(const string &input_dir, const string &filename, ImgprocMode mode,
+                  const string &output_dir, ofstream &metadata_file) {
+
+    ProcessedImageMetadata      metadata;
     Mat                         src, gray, cropped;
     Vec3f                       circle1, circle2;
     vector<Vec3f>               circles;
+    vector<Mat>                 images;
+    vector<string>              image_names;
 
-    cout << "Opening " << filepath << endl;
+    metadata.discard  = false;
+    metadata.filename = filename;
+
+    cout << "Opening " << filename << endl;
 
     // Read the image
-    src = imread(filepath, 1);
+    src = imread(input_dir + filename, 1);
+    images.push_back(src);
+    image_names.push_back(filename);
 
     if (!src.data) {
-        cerr << "Failed to open image " << filepath << endl;
+        cerr << "Failed to open image " << filename << endl;
         return;
     }
 
     // Among other things, standardize image size - this allows us to
     // use the same hough/gauusian blur parameters for all images
-    preprocessImage(src, gray);
+    preprocessImage(src, gray, metadata, mode, images, image_names);
+    images.push_back(gray);
+    image_names.push_back("Processed");
 
-    // DEBUG
-    imshow("Processed", gray);
-
-    computeCircles(gray, circles, 30, 15);
-
-    // DEBUG
-    Mat temp;
-    Canny(gray, temp, 30 / 2, 30, 3, false);
-    imshow("Edges", temp);
-
-    // int key = 0, c1 = 52, c2 = 26;
-    // while ((0x00FF & key) != ' ') {
-    //     Mat temp;
-    //     cout << "c1: " << c1 << endl;
-    //     cout << "c2: " << c2 << endl;
-    //     Canny(gray, temp, c1 / 2, c1, 3, false);
-    //     computeCircles(gray, circles, c1, c2);
-    //     imshow("Edges", temp);
-    //     displayImageWith2Circles(gray, circles.size() > 0 ? circles[0] : Vec3f(), circles.size() > 1 ? circles[1] : Vec3f(), filepath);
-    //     key = waitKey(0);
-    //
-    //     switch (key) {
-    //         case 1113938:
-    //             cout << "Up" << endl;
-    //             c1++;
-    //             break;
-    //         case 1113940:
-    //             cout << "Down" << endl;
-    //             c1--;
-    //             break;
-    //         case 1113937:
-    //             cout << "Left" << endl;
-    //             c2++;
-    //             break;
-    //         case 1113939:
-    //             cout << "Right" << endl;
-    //             c2--;
-    //             break;
-    //         default:
-    //             cout << "Invalid" << endl;
-    //             break;
-    //     }
-    // }
-
-
-
+    computeCircles(gray, circles, 30, 15, metadata, mode, images, image_names);
 
     if (circles.size() == 0) {
-        discard = true;
-        cout << "No sun found. Discarding " << filepath << endl;
+        metadata.discard = true;
+        metadata.discard_reasons += "No sun found;";
     }
 
-    if (!discard) {
+    if (!metadata.discard) {
         circle1 = rescaleCircle(circles[0], src);
         if (circles.size() > 1) {
             circle2 = rescaleCircle(circles[1], src);
         }
-        if (circle1[2] < 50) {
-            discard = true;
-            cout << "Sun is too small. Discarding " << filepath << endl;
+        if (circle1[2] < MIN_SUN_RADIUS) {
+            metadata.discard = true;
+            metadata.discard_reasons += "Sun is too small;";
         }
     }
+    
+    metadata.circle1 = &circle1;
+    metadata.circle2 = &circle2;
+
+    outputProcessedImage(images, image_names, output_dir, metadata_file, metadata, mode);
+}
 
 
+void writeImageMetadata(ProcessedImageMetadata &metadata, ofstream &metadata_file) {
 
-    if (!discard) {
-        // This computation can be done using our preprocessed image.
-        // Since this image is smaller than most high quality images it will
-        // improve performance.
-        image_type = getImageType(gray, circles[0],
-                                  circles.size() > 1 ? circles[1] : Vec3f());
-
-        String type;
-        switch (image_type) {
-        case CRESCENT:
-            type = "Crescent";
-            break;
-        case FULL_DISK:
-            type = "Full Disk";
-            break;
-        case TOTALITY:
-            type = "Totality";
-            break;
-        default:
-            type = "Unknown";
-            break;
-        }
-
-        cout << "Image type\t" << type << endl;
-
-        // This is not really where this code will go - just here for now for debugging purposes.
-        if (cropAroundSolarDisk(src, cropped, circle1)) {
-            imshow("Cropped", cropped);
-        }
-        else {
-            discard = true;
-            cout << "Not enough padding around solar disk to crop. Discarding "
-                 << filepath << endl;
-        }
-    }
-
-    displayImageWith2Circles(src, circle1, circle2, filepath);
+    metadata_file << metadata.filename << "|";
+    metadata_file << getCircleTuple(*(metadata.circle1)) << "|";
+    metadata_file << getCircleTuple(*(metadata.circle2)) << "|";
+    metadata_file << metadata.preprocess_secs << "|";
+    metadata_file << metadata.hough_secs << "|";
+    metadata_file << metadata.discard << "|";
+    metadata_file << metadata.discard_reasons;
+    metadata_file << endl;
 }

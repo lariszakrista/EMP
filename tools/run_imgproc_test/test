@@ -30,7 +30,7 @@ mkdir $OUTPUT_DIR
 pushd ../../src/imgproc/cpp
 make clean
 make
-./imgproc_batch $SRC_IMG_FILE $SRC_IMG_DIR $OUTPUT_DIR
+./imgproc $SRC_IMG_FILE $SRC_IMG_DIR batch $OUTPUT_DIR
 popd
 
 python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR $OUTPUT_DIR
