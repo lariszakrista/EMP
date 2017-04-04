@@ -7,7 +7,7 @@ from ast import literal_eval
 import math
 
 OUTPUT_FILE = "output.html"
-TRUTH_FILE = "/image_data.txt"
+TRUTH_FILE = "image_data.txt"
 
 HTML = """
 <script defer src="https://code.getmdl.io/1.2.1/material.min.js"></script>
@@ -208,7 +208,7 @@ def euclidean_distance(circle1, circle2):
 
 def read_metadata(original_path, processed_path):
 
-    truth_file = open(os.path.join(original_path + TRUTH_FILE), 'r')
+    truth_file = open(os.path.join(original_path, TRUTH_FILE), 'r')
 
     truth_positions = {}
     for line in truth_file:
@@ -218,7 +218,7 @@ def read_metadata(original_path, processed_path):
 
         truth_positions[tokens[0]] = position
     
-    f = open(os.path.join(processed_path + "/metadata.txt"), 'r')
+    f = open(os.path.join(processed_path, "metadata.txt"), 'r')
 
     metadata_items = []
 
