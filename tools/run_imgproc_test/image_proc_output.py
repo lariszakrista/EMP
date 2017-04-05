@@ -169,23 +169,24 @@ HTML = """
 						    <th class="mdl-data-table__cell--non-numeric">
 							    Processed
 						    </th>
+
 						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
-							    Sun Diff 
+							    Sun Diff (px)
                                 <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="sun_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
 						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
-							    Moon Diff
+							    Moon Diff (px)
                                 <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
 						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)" style="cursor: pointer;">
-							    Pre-process time
+							    Pre-process time (secs)
                                 <i id="pre_proc_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="pre_proc_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
                     		<th class="mdl-data-table__cell--non-numeric" onclick="sort_table(5)" style="cursor: pointer;">
-							    Hough time
+							    Hough time (secs)
                                 <i id="hough_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="hough_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
