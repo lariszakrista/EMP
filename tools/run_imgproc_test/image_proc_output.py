@@ -6,7 +6,6 @@ import sys
 from ast import literal_eval
 import math
 
-METADATA_FILE = "metadata.txt"
 OUTPUT_FILE = "output.html"
 TRUTH_FILE = "image_data.txt"
 
@@ -41,6 +40,101 @@ HTML = """
 			max-height: 300px;
 		}
 	</style>
+
+	<script>
+
+        function hide_all_arrows() {
+
+            document.getElementById("sun_diff_up").style.display = "none";
+            document.getElementById("sun_diff_down").style.display = "none";
+
+            document.getElementById("moon_diff_up").style.display = "none";
+            document.getElementById("moon_diff_down").style.display = "none";
+
+            document.getElementById("pre_proc_up").style.display = "none";
+            document.getElementById("pre_proc_down").style.display = "none";
+
+            document.getElementById("hough_up").style.display = "none";
+            document.getElementById("hough_down").style.display = "none";
+
+        }
+
+        function sort_table(n) {
+
+	        var table, rows, switching, i, x, y, should_switch, direction, switchcount = 0;
+
+            switch(n) {
+                case 2:
+                    var col_name = "sun_diff";
+                    break;
+                case 3:
+                    var col_name = "moon_diff";
+                    break;
+                case 4:
+                    var col_name = "pre_proc";
+                    break;
+                case 5:
+                    var col_name = "hough";
+                    break;
+                defult:
+                    console.log("error this isn't possible");
+            }
+
+	        table = document.getElementById("eclipse_data_table");
+
+	        switching = true;
+
+	        direction = "ascending";
+            var arrow_direction = "up";
+
+            
+
+	        while (switching) {
+
+		        switching = false;
+		        rows = table.getElementsByTagName("tr");
+
+		        for (i = 1; i < (rows.length - 1); i++) {
+
+			        should_switch = false;
+
+			        x = rows[i].getElementsByTagName("td")[n];
+			        y = rows[i + 1].getElementsByTagName("td")[n];
+
+			        if (direction == "ascending") {
+				        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+
+					        should_switch= true;
+					        break;
+				        }
+			        } else if (direction == "descending") {
+				        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+
+					        should_switch= true;
+					        break;
+				        }
+		            }
+	            }
+
+                if (should_switch) {
+	                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+	                switching = true;
+
+	                switchcount ++;
+	            } else {
+	                if (switchcount == 0 && direction == "ascending") {
+	                    direction = "descending";
+                        arrow_direction = "down";
+	                    switching = true;
+	                }
+	            }
+	        }
+
+            hide_all_arrows();
+            document.getElementById(col_name + "_" + arrow_direction).style.display = "";
+        }        
+
+	</script>
 </head>
 <body>
 
@@ -66,7 +160,7 @@ HTML = """
 
                 <h3>Output Table</h3>
 
-                <table class="mdl-data-table mdl-js-data-table">
+                <table id="eclipse_data_table" class="mdl-data-table mdl-js-data-table">
 				    <thead>
 					    <tr>
 						    <th class="mdl-data-table__cell--non-numeric">
@@ -75,19 +169,28 @@ HTML = """
 						    <th class="mdl-data-table__cell--non-numeric">
 							    Processed
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric">
+
+						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
 							    Sun Diff (px)
+                                <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="sun_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric">
+						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
 							    Moon Diff (px)
+                                <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric">
+						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)" style="cursor: pointer;">
 							    Pre-process time (secs)
+                                <i id="pre_proc_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="pre_proc_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-                    				<th class="mdl-data-table__cell--non-numeric">
+                    		<th class="mdl-data-table__cell--non-numeric" onclick="sort_table(5)" style="cursor: pointer;">
 							    Hough time (secs)
+                                <i id="hough_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="hough_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-                    				<th class="mdl-data-table__cell--non-numeric">
+                    		<th class="mdl-data-table__cell--non-numeric">
 							    Discarded Reasons
 						    </th>
 					    </tr>
@@ -164,7 +267,7 @@ def read_metadata(original_path, processed_path):
 
         truth_positions[tokens[0]] = position
     
-    f = open(os.path.join(processed_path, METADATA_FILE), 'r')
+    f = open(os.path.join(processed_path, "metadata.txt"), 'r')
 
     metadata_items = []
 
