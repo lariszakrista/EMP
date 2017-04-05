@@ -43,15 +43,51 @@ HTML = """
 
 	<script>
 
+        function hide_all_arrows() {
+
+            document.getElementById("sun_diff_up").style.display = "none";
+            document.getElementById("sun_diff_down").style.display = "none";
+
+            document.getElementById("moon_diff_up").style.display = "none";
+            document.getElementById("moon_diff_down").style.display = "none";
+
+            document.getElementById("pre_proc_up").style.display = "none";
+            document.getElementById("pre_proc_down").style.display = "none";
+
+            document.getElementById("hough_up").style.display = "none";
+            document.getElementById("hough_down").style.display = "none";
+
+        }
+
         function sort_table(n) {
 
 	        var table, rows, switching, i, x, y, should_switch, direction, switchcount = 0;
+
+            switch(n) {
+                case 2:
+                    var col_name = "sun_diff";
+                    break;
+                case 3:
+                    var col_name = "moon_diff";
+                    break;
+                case 4:
+                    var col_name = "pre_proc";
+                    break;
+                case 5:
+                    var col_name = "hough";
+                    break;
+                defult:
+                    console.log("error this isn't possible");
+            }
 
 	        table = document.getElementById("eclipse_data_table");
 
 	        switching = true;
 
 	        direction = "ascending";
+            var arrow_direction = "up";
+
+            
 
 	        while (switching) {
 
@@ -88,10 +124,14 @@ HTML = """
 	            } else {
 	                if (switchcount == 0 && direction == "ascending") {
 	                    direction = "descending";
+                        arrow_direction = "down";
 	                    switching = true;
 	                }
 	            }
 	        }
+
+            hide_all_arrows();
+            document.getElementById(col_name + "_" + arrow_direction).style.display = "";
         }        
 
 	</script>
@@ -129,19 +169,27 @@ HTML = """
 						    <th class="mdl-data-table__cell--non-numeric">
 							    Processed
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)">
-							    Sun Diff
+						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
+							    Sun Diff 
+                                <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="sun_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)">
+						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
 							    Moon Diff
+                                <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)">
+						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)" style="cursor: pointer;">
 							    Pre-process time
+                                <i id="pre_proc_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="pre_proc_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-                    		<th class="mdl-data-table__cell--non-numeric" onclick="sort_table(5)">
+                    		<th class="mdl-data-table__cell--non-numeric" onclick="sort_table(5)" style="cursor: pointer;">
 							    Hough time
+                                <i id="hough_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="hough_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-                    				<th class="mdl-data-table__cell--non-numeric">
+                    		<th class="mdl-data-table__cell--non-numeric">
 							    Discarded Reasons
 						    </th>
 					    </tr>
