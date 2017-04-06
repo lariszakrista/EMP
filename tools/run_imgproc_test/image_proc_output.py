@@ -61,7 +61,7 @@ HTML = """
 
         function sort_table(n) {
 
-	        var table, rows, switching, i, x, y, should_switch, direction, switchcount = 0;
+	        var table, rows, switching, i, x, y, should_switch, direction, switchcount = 0, x_val, y_val, x_rad, y_rad;
 
             switch(n) {
                 case 2:
@@ -101,14 +101,40 @@ HTML = """
 			        x = rows[i].getElementsByTagName("td")[n];
 			        y = rows[i + 1].getElementsByTagName("td")[n];
 
+                    if(x.innerHTML.toLowerCase().includes("center offset")) {
+                        var x_result = x.innerHTML.split("<br>");
+                        var y_result = y.innerHTML.split("<br>");
+
+                        x_val = x_result[1];
+                        if (x_val.toLowerCase().includes("no moon")) {
+                            x_val = 10000;
+                        } else {
+                            x_val = parseFloat(x_val) + Math.abs(parseFloat(x_result[4]));
+                        }
+
+                        y_val = y_result[1];
+                        if (y_val.toLowerCase().includes("no moon")) {
+                            y_val = 10000;
+                        } else {
+                            y_val = parseFloat(y_val) + Math.abs(parseFloat(y_result[4]));
+                        }
+
+                    } else {
+                        var x_result = x.innerHTML.split(" ");
+                        var y_result = y.innerHTML.split(" ");
+
+                        x_val = x_result[4];
+                        y_val = y_result[4];
+                    } 
+
 			        if (direction == "ascending") {
-				        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+				        if (x_val > y_val) {
 
 					        should_switch= true;
 					        break;
 				        }
 			        } else if (direction == "descending") {
-				        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+				        if (x_val < y_val) {
 
 					        should_switch= true;
 					        break;
