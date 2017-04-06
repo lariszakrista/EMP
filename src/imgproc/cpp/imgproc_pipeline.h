@@ -1,9 +1,12 @@
 #ifndef IMGPROC_H
 #define IMGPROC_H
 
+#include <libgen.h>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <ctime>
+#include <vector>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -18,26 +21,29 @@ class ImgProcPipeline{
 		Image current_image;
 		std::ofstream metadata_file;
 		std::ifstream image_file;
-		std::string input_dir;
+		std::string dest_dir;
+		ImgprocMode mode;
 	public:
 		// Will open up the initialize image_file ifstream object given input_file string
-		ImgProcPipeline(std::string, std::string, ImgprocMode, std::ofstream &);		
+		ImgProcPipeline(std::string, std::string, ImgprocMode, std::string);		
 		
 		// Preprocesses the image before image processing
 		void preprocess(const cv::Mat &);
+
+		std::pair<int, int> getRescaledDimensions(const cv::Mat &, int, int);
 
 		// Detect circles in the image
 		void find_circles(const cv::Mat &);
 
 		// Invokes get_next_image and then initializes an image object
-		void run_single_image();
+		void run_single_image(const cv::Mat &);
 		
 		// Will process all of the images in the input file
 		// Utilizes grab_next_image() to grab the next image
 		void run_all();
 		
 		// Will grab the next image from the input file
-		void get_next_image(); 	
+		cv::Mat get_next_image(); 	
 
 };
 

@@ -10,10 +10,10 @@
 class Image
 {
 public:
-	
-	Image();	
 
-    Image(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const std::string &image_dest);
+    Image();
+
+    Image(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const std::string &image_dest = "");
 
     // Adds intermediate image **if in window mode** because intermediate images
     // are not used in other modes. 
@@ -74,4 +74,3 @@ private:
     // Open file stream that metadata will be written to
     std::ofstream *metadata_file;
 };
-
