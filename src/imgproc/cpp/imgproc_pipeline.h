@@ -21,14 +21,14 @@ class ImgProcPipeline{
 		Image current_image;
 		std::ofstream metadata_file;
 		std::ifstream image_file;
-		std::string dest_dir;
+		std::string output_dir;
 		ImgprocMode mode;
 	public:
 		// Will open up the initialize image_file ifstream object given input_file string
-		ImgProcPipeline(std::string, std::string, ImgprocMode, std::string);		
+		ImgProcPipeline(int, char **);		
 		
 		// Preprocesses the image before image processing
-		void preprocess(const cv::Mat &);
+		void preprocess(const cv::Mat &, cv::Mat &);
 
 		std::pair<int, int> getRescaledDimensions(const cv::Mat &, int, int);
 
@@ -43,7 +43,7 @@ class ImgProcPipeline{
 		void run_all();
 		
 		// Will grab the next image from the input file
-		cv::Mat get_next_image(); 	
+		bool get_next_image(); 	
 
 };
 

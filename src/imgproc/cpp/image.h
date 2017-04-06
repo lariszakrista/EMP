@@ -15,6 +15,8 @@ public:
 
     Image(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const std::string &image_dest = "");
 
+	cv::Mat get_original_image();
+
     // Adds intermediate image **if in window mode** because intermediate images
     // are not used in other modes. 
     void add_intermediate_image(const std::string &name, const cv::Mat &image);

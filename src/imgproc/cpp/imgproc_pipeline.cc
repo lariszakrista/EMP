@@ -3,69 +3,99 @@
 using namespace cv;
 using std::string;
 using std::ofstream;
-using std::fstream;
+using std::ifstream;
 using std::cout;
 using std::endl;
 using std::cerr;
 using std::vector;
 using cv::Mat;
 
-#define HD_MAX_W                            1920
-#define HD_MAX_H                            1080
-#define METADATA_FILE_NAME                  "metadata.txt"
 
-ImgProcPipeline::ImgProcPipeline(string file, string dest_dir, ImgprocMode mode, string metadata_name){
+ImgProcPipeline::ImgProcPipeline(int argc, char **argv){
 
-	this->mode = mode;
-	this->dest_dir = dest_dir;
 
-    this->metadata_file.open(metadata_name.c_str(), std::ofstream::out);
+	ImgprocMode mode;
+    ifstream f;
+    ofstream metadata_file;
+    string valid_modes, input_file, dest_dir, mode_str, output_dir;
 
-    if (!metadata_file.is_open()) {
-        cerr << "Could not open metadata file " << metadata_file << endl;
-        exit(0);
+    if (argc < 3) {
+        cerr << "Usage:\n\t$ ./imgproc images_file mode output_dir" << endl;
+        cerr << endl << "Modes:\t" << valid_modes << "\n";
+        cerr << "\toutput_dir required when run in batch mode\n" << endl;
+		exit(1);
+    } 
+
+    input_file = argv[1];
+    mode_str   = argv[2];
+    
+    if (mode_str == "batch")
+    {
+        this->mode       = BATCH;
+        this->output_dir = argv[3];
+    }
+    else if (mode_str == "window")
+    {
+        this->mode = WINDOW;
+		this->output_dir = "";
+    }
+    else
+    {
+        cerr << "Invalid mode: " << mode_str << ". Valid modes: " << valid_modes << endl;
+     	exit(1);
+    }
+
+    if (mode == BATCH)
+    {
+        // Add trailing slash to dir path if necessary
+	    this->output_dir += this->output_dir[this->output_dir.size() - 1] == '/' ? "" : "/";
+    }
+
+	this->metadata_file.open(METADATA_FILE_NAME, std::ifstream::in);
+
+	if(!this->metadata_file.is_open()){
+		cerr << "Could not open images file " << METADATA_FILE_NAME << endl;
+		exit(0);
     }
 
     // open the image file
-    this->image_file.open(file.c_str(), std::ifstream::in);	
+    this->image_file.open(input_file.c_str(), std::ifstream::in);	
 
     if(!this->image_file.is_open()){
-		cerr << "Could not open images file " << file << endl;
+		cerr << "Could not open images file " << input_file << endl;
 		exit(0);
     }
 }
 
-void ImgProcPipeline::preprocess(const Mat &image){
+void ImgProcPipeline::preprocess(const Mat &image, Mat &processed){
      
     Mat blurred;
-    Mat gray;
     std::pair<int, int> dimensions;
 
     time_t t = std::clock();
 
     // Convert image to black and white
-    cvtColor(image, gray, CV_BGR2GRAY);
-    this->current_image.add_intermediate_image("gray", gray);
+    cvtColor(image, processed, CV_BGR2GRAY);
+    this->current_image.add_intermediate_image("gray", processed);
 
     // Resize image to normalized size
-    dimensions = getRescaledDimensions(gray, HD_MAX_W, HD_MAX_H);
-    resize(gray, gray, Size(dimensions.first, dimensions.second));
+    dimensions = getRescaledDimensions(processed, HD_MAX_W, HD_MAX_H);
+    resize(processed, processed, Size(dimensions.first, dimensions.second));
 
     // Apply an unsharp mask to increase local contrast
-    GaussianBlur(gray, blurred, Size(15, 15), 20, 20);
-    addWeighted(gray, 1.5, blurred, -0.5, 0, gray);
-    this->current_image.add_intermediate_image("unsharp", gray); 
+    GaussianBlur(processed, blurred, Size(15, 15), 20, 20);
+    addWeighted(processed, 1.5, blurred, -0.5, 0, processed);
+    this->current_image.add_intermediate_image("unsharp", processed); 
 
     // Blur final image to reduce noise
-    // GaussianBlur(gray, gray, Size(9, 9), 30, 30);
-    medianBlur(gray, gray, 11);
-    this->current_image.add_intermediate_image("blur", gray);
+    GaussianBlur(processed, processed, Size(9, 9), 30, 30);
+    // medianBlur(processed, processed, 11);
+    this->current_image.add_intermediate_image("blur", processed);
 
     t = std::clock() - t;
     
     // add execution time
     this->current_image.add_execution_time("preprocess", (double) t / (double) CLOCKS_PER_SEC);
-
 }
 
 std::pair<int, int> ImgProcPipeline::getRescaledDimensions(const Mat &image, int max_w, int max_h) {
@@ -83,6 +113,7 @@ std::pair<int, int> ImgProcPipeline::getRescaledDimensions(const Mat &image, int
     return dimensions;
 }
 
+// image needs to be gray
 void ImgProcPipeline::find_circles(const Mat &image){
     
     Mat canny;
@@ -107,46 +138,58 @@ void ImgProcPipeline::find_circles(const Mat &image){
 
 void ImgProcPipeline::run_single_image(const Mat &image){
 	
+	Mat processed;
+
     // Preprocess the image
-    this->preprocess(image);
+    this->preprocess(image, processed);
 	
-    // compute the circles	
-    //this->find_circles(image);
+    // compute the circles with the preprocessed image
+    this->find_circles(processed);
 
-    this->current_image.record();
-
-
+	this->current_image.add_final_image(image);
+	
 }
 
 void ImgProcPipeline::run_all(){
 
-   Mat image = this->get_next_image();
-
-   this->current_image = Image(image, this->mode, &this->metadata_file, "");
-
    // continually grab an image
-   while (image.data) {
-       
-       this->run_single_image(image);
-       
-       image = this->get_next_image();
+   while (this->get_next_image()) {
+		
+        this->run_single_image(this->current_image.get_original_image());
+
+		if (this->current_image.record()){
+			break;
+		}
+
    }
 
 }
 
 // Will grab the next image name from the image file
-Mat ImgProcPipeline::get_next_image(){
+bool ImgProcPipeline::get_next_image(){
 	
     string filename; 
     Mat src;	
 	
     std::getline(this->image_file, filename);
-	
+
+	// Convert string to a cstring 
+	char c_filename[256];
+	for(int i = 0; i < 256; i++){
+
+		c_filename[i] = filename[i];
+	}
+	c_filename[filename.length()] = '\0';
+
     src = imread(filename, 1);
 	
     if (!src.data) {
-	cerr << "Failed to open image" << filename << endl;
+		cerr << "Failed to open image" << filename << endl;
+		return false;
     }
 
-    return src;				
+	this->current_image = Image(src, this->mode, &this->metadata_file, this->output_dir + basename(c_filename));
+
+   	return true;			
 }
+

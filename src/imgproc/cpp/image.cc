@@ -2,21 +2,21 @@
 
 #include "image.h"
 
-
 using std::endl;
 using std::map;
 using std::string;
 using std::vector;
 
-using namespace std;
 using namespace cv;
 
-Image::Image(){};
+Image::Image(){}
 
 Image::Image(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const string &image_dest)
 : original(image), mode(mode), metadata_file(metadata_file), dest(image_dest)
 {
 }
+
+cv::Mat Image::get_original_image(){ return this->original; }
 
 void Image::add_intermediate_image(const string &name, const Mat &image)
 {
@@ -39,7 +39,6 @@ bool Image::record()
     switch (this->mode)
     {
     case WINDOW:
-
         // Show original image
         imshow("original", this->original);
 
