@@ -169,17 +169,13 @@ void ImgProcPipeline::run_all(){
 bool ImgProcPipeline::get_next_image(){
 	
     string filename; 
-    Mat src;	
+    Mat src;
+	char c_filename[256];	
 	
     std::getline(this->image_file, filename);
 
 	// Convert string to a cstring 
-	char c_filename[256];
-	for(int i = 0; i < 256; i++){
-
-		c_filename[i] = filename[i];
-	}
-	c_filename[filename.length()] = '\0';
+	strcpy(c_filename, filename.c_str());
 
     src = imread(filename, 1);
 	
