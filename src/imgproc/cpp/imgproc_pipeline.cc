@@ -118,18 +118,23 @@ void ImgProcPipeline::find_circles(const Mat &image){
     
     Mat canny;
     vector<Vec3f> circles;
+
     double c1 = 30, c2 = 15;
 
     time_t t = std::clock();
     HoughCircles(image, circles, CV_HOUGH_GRADIENT, 2,
                  image.rows / 8, c1, c2, 0, 0);
     t = std::clock() - t;
-    
-    // Add performance time for computing circles to image object
+
+	// Add performance time for computing circles to image object
     this->current_image.add_execution_time("circles", (double) t / (double) CLOCKS_PER_SEC);
-    
-    // Add circles to image object
-    this->current_image.add_circles(circles);
+	
+	// Add circles to image object
+    this->current_image.add_circles(circles);	
+
+	if (circles.size() == 0) {
+		this->current_image.add_observation("No sun found");
+	}
     
     Canny(image, canny, MAX(c1 / 2, 1), c1, 3, false);
     this->current_image.add_intermediate_image("Canny edges", canny);
@@ -139,7 +144,8 @@ void ImgProcPipeline::find_circles(const Mat &image){
 void ImgProcPipeline::run_single_image(const Mat &image){
 	
 	Mat processed;
-
+	Vec3f circle1, circle2;
+	
     // Preprocess the image
     this->preprocess(image, processed);
 	
