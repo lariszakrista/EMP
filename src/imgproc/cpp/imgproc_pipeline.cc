@@ -172,20 +172,26 @@ bool ImgProcPipeline::get_next_image(){
     Mat src;
 	char c_filename[256];	
 	
-    std::getline(this->image_file, filename);
-
-	// Convert string to a cstring 
-	strcpy(c_filename, filename.c_str());
-
-    src = imread(filename, 1);
+	// If image fails to open, it will go to the next image 
+    while(!src.data) {
+		
+		// Stop grabbing images if we are at the end of a file
+		if(this->image_file.eof()) return false;
+		
+		std::getline(this->image_file, filename);
+		strcpy(c_filename, filename.c_str());
 	
-    if (!src.data) {
-		cerr << "Failed to open image" << filename << endl;
-		return false;
+		src = imread(filename, 1);
+		
+		// Only break out a good image is taken
+		if(src.data)
+			break;
+
+		cerr << "Failed to open image: " << filename << endl;
     }
-
+	
 	this->current_image = Image(src, this->mode, &this->metadata_file, this->output_dir + basename(c_filename));
-
+	
    	return true;			
 }
 
