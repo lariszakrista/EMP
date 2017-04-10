@@ -4,7 +4,8 @@
 
 **Parameters:** 
 - images_file: text file of image filenames with no path prefix, one per line 
-- input_dir: location of images listed in images_file. 
+- mode: batch or window (see below).
+- output_dir: directory to save image processed image and metadata files 
 
 **Modes:**
 - `batch` mode: this will loop through all the images without stopping, 
@@ -27,8 +28,9 @@ $
 $ # Run
 $ ./imgproc
 Usage:
-	$ ./imgproc images_file input_dir mode [output_dir]
+    $ ./pipeline images_file mode [output_dir]
 
-Modes:	[batch, window]
-	output_dir required when run in batch mode
+Params:
+    output_dir required when run in batch mode
+    modes: window, batch
 ```
