@@ -43,6 +43,9 @@ HTML = """
 
 	<script>
 
+        var prev_col_name = " ";
+        var ascending = true;
+
         function hide_all_arrows() {
 
             document.getElementById("sun_diff_up").style.display = "none";
@@ -59,106 +62,161 @@ HTML = """
 
         }
 
+        function sun_diff_comparator(row1, row2) {
+            var col_val = 2;
+
+            var row1_cell = row1.getElementsByTagName("td")[col_val];
+            var row2_cell = row2.getElementsByTagName("td")[col_val];
+
+            var row1_result = row1_cell.innerHTML.split("<br>");
+            var row2_result = row2_cell.innerHTML.split("<br>");
+
+            var row1_val = row1_result[1];
+            row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+
+            var row2_val = row2_result[1];
+            row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
+
+            if (row1_val < row2_val) {
+                return -1;
+            }
+            if (row1_val > row2_val) {
+                return 1;
+            }
+            return 0;
+        }
+
+        function moon_diff_comparator(row1, row2) {
+            var col_val = 3;
+
+            var row1_cell = row1.getElementsByTagName("td")[col_val];
+            var row2_cell = row2.getElementsByTagName("td")[col_val];
+
+            var row1_result = row1_cell.innerHTML.split("<br>");
+            var row2_result = row2_cell.innerHTML.split("<br>");
+
+            var row1_val = row1_result[1];
+            if (row1_val.toLowerCase().includes("no moon")) {
+                row1_val = 10000;
+            } else {
+                row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+            }
+
+            var row2_val = row2_result[1];
+            if (row2_val.toLowerCase().includes("no moon")) {
+                row2_val = 10000;
+            } else {
+                row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
+            }
+
+            if (row1_val < row2_val) {
+                return -1;
+            }
+            if (row1_val > row2_val) {
+                return 1;
+            }
+            return 0;
+        }
+
+        function pre_proc_comparator(row1, row2) {
+            var col_val = 4;
+
+            var row1_cell = row1.getElementsByTagName("td")[col_val];
+            var row2_cell = row2.getElementsByTagName("td")[col_val];
+
+            var row1_result = row1_cell.innerHTML.split(" ");
+            var row2_result = row2_cell.innerHTML.split(" ");
+
+            var row1_val = row1_result[4];
+            var row2_val = row2_result[4];
+
+            if (row1_val < row2_val) {
+                return -1;
+            }
+            if (row1_val > row2_val) {
+                return 1;
+            }
+            return 0;
+        }
+
+        function hough_comparator(row1, row2) {
+            var col_val = 5;
+
+            row1_cell = row1.getElementsByTagName("td")[col_val];
+            row2_cell = row2.getElementsByTagName("td")[col_val];
+
+            var row1_result = row1_cell.innerHTML.split(" ");
+            var row2_result = row2_cell.innerHTML.split(" ");
+
+            var row1_val = row1_result[4];
+            var row2_val = row2_result[4];
+
+            if (row1_val < row2_val) {
+                return -1;
+            }
+            if (row1_val > row2_val) {
+                return 1;
+            }
+            return 0;
+        }
+
         function sort_table(n) {
 
-	        var table, rows, switching, i, x, y, should_switch, direction, switchcount = 0, x_val, y_val, x_rad, y_rad;
+            var table = document.getElementById("eclipse_data_table");
+            var table_body = document.getElementById("eclipse_data_table_body");
+
+            var row_array = Array.prototype.slice.call(table_body.children);
+
+            var start = performance.now();
 
             switch(n) {
                 case 2:
                     var col_name = "sun_diff";
+                    row_array.sort(sun_diff_comparator);
                     break;
                 case 3:
                     var col_name = "moon_diff";
+                    row_array.sort(moon_diff_comparator);
                     break;
                 case 4:
                     var col_name = "pre_proc";
+                    row_array.sort(pre_proc_comparator);
                     break;
                 case 5:
                     var col_name = "hough";
+                    row_array.sort(hough_comparator);
                     break;
                 defult:
                     console.log("error this isn't possible");
             }
 
-	        table = document.getElementById("eclipse_data_table");
+            if(prev_col_name == col_name) {
+                ascending = !ascending;
+            } else {
+                ascending = true;
+            }
 
-	        switching = true;
-
-	        direction = "ascending";
-            var arrow_direction = "up";
-
-            
-
-	        while (switching) {
-
-		        switching = false;
-		        rows = table.getElementsByTagName("tr");
-
-		        for (i = 1; i < (rows.length - 1); i++) {
-
-			        should_switch = false;
-
-			        x = rows[i].getElementsByTagName("td")[n];
-			        y = rows[i + 1].getElementsByTagName("td")[n];
-
-                    if(x.innerHTML.toLowerCase().includes("center offset")) {
-                        var x_result = x.innerHTML.split("<br>");
-                        var y_result = y.innerHTML.split("<br>");
-
-                        x_val = x_result[1];
-                        if (x_val.toLowerCase().includes("no moon")) {
-                            x_val = 10000;
-                        } else {
-                            x_val = parseFloat(x_val) + Math.abs(parseFloat(x_result[4]));
-                        }
-
-                        y_val = y_result[1];
-                        if (y_val.toLowerCase().includes("no moon")) {
-                            y_val = 10000;
-                        } else {
-                            y_val = parseFloat(y_val) + Math.abs(parseFloat(y_result[4]));
-                        }
-
-                    } else {
-                        var x_result = x.innerHTML.split(" ");
-                        var y_result = y.innerHTML.split(" ");
-
-                        x_val = x_result[4];
-                        y_val = y_result[4];
-                    } 
-
-			        if (direction == "ascending") {
-				        if (x_val > y_val) {
-
-					        should_switch= true;
-					        break;
-				        }
-			        } else if (direction == "descending") {
-				        if (x_val < y_val) {
-
-					        should_switch= true;
-					        break;
-				        }
-		            }
-	            }
-
-                if (should_switch) {
-	                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-	                switching = true;
-
-	                switchcount ++;
-	            } else {
-	                if (switchcount == 0 && direction == "ascending") {
-	                    direction = "descending";
-                        arrow_direction = "down";
-	                    switching = true;
-	                }
-	            }
-	        }
+            if (ascending) {
+                for (var i = 0; i < row_array.length; i++) {
+                    table.children[1].appendChild(row_array[i]);
+                }
+                var arrow_direction = "up";
+            } else {
+                for (var i = row_array.length -1; i > -1; i--) {
+                    table.children[1].appendChild(row_array[i]);
+                }
+                var arrow_direction = "down";
+            }
 
             hide_all_arrows();
             document.getElementById(col_name + "_" + arrow_direction).style.display = "";
-        }        
+
+            var end = performance.now();
+            var time = end - start;
+            console.log('Execution time: ' + time);
+
+            prev_col_name = col_name;
+        }       
 
 	</script>
 </head>
@@ -221,7 +279,7 @@ HTML = """
 						    </th>
 					    </tr>
 					</thead>
-				    <tbody>
+				    <tbody id="eclipse_data_table_body">
                     {% for item in items %}
 					    <tr>
 						    <td class="mdl-data-table__cell--non-numeric img-cell">
