@@ -1,6 +1,6 @@
 #include <opencv2/highgui/highgui.hpp>
 
-#include "image.h"
+#include "imgproc_image.h"
 #include <iostream>
 
 using std::endl;
@@ -10,26 +10,35 @@ using std::vector;
 
 using namespace cv;
 
-Image::Image(){}
+ImgProcImage::ImgProcImage()
+{
+}
 
-Image::Image(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const string &image_dest)
+ImgProcImage::ImgProcImage(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const string &image_dest)
 : original(image), mode(mode), metadata_file(metadata_file), dest(image_dest)
 {
 }
 
-cv::Mat Image::get_original_image(){ return this->original; }
-
-void Image::add_intermediate_image(const string &name, const Mat &image)
-{
-    this->intermediate_images[name] = image;
+cv::Mat &ImgProcImage::get_original_image()
+{ 
+    return this->original; 
 }
 
-void Image::add_final_image(const Mat &image)
+void ImgProcImage::add_intermediate_image(const string &name, const Mat &image)
+{
+    // Intermediate images only used in WINDOW mode
+    if (this->mode == WINDOW)
+    {
+        this->intermediate_images[name] = image.clone();
+    }
+}
+
+void ImgProcImage::add_final_image(const Mat &image)
 {
     this->processed = image;
 }
 
-bool Image::record()
+bool ImgProcImage::record()
 {
     int key = 0;
     map<string, Mat>::iterator    img_it;
@@ -95,23 +104,23 @@ bool Image::record()
     return key == ESC_KEY;
 }
 
-void Image::add_circle(const Vec3f &circle)
+void ImgProcImage::add_circle(const Vec3f &circle)
 {
     this->circles.push_back(circle);
 }
 
-void Image::add_circles(const vector<Vec3f> &new_circles)
+void ImgProcImage::add_circles(const vector<Vec3f> &new_circles)
 {
     this->circles.reserve(this->circles.size() + std::distance(new_circles.begin(), new_circles.end()));
     this->circles.insert(this->circles.end(), new_circles.begin(), new_circles.end());
 }
 
-void Image::add_observation(const std::string &observation)
+void ImgProcImage::add_observation(const std::string &observation)
 {
     this->observations.push_back(observation);
 }
 
-void Image::add_execution_time(const std::string &name, double num_secs)
+void ImgProcImage::add_execution_time(const std::string &name, double num_secs)
 {
     this->execution_times[name] = num_secs;
 }

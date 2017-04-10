@@ -3,20 +3,17 @@ LIBS = -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui
 
 all: pipeline
 
-imgproc: imgproc.cc imgproc_util.o
-	g++ imgproc.cc imgproc_util.o -o imgproc $(LIBS)
+pipeline: driver.cc imgproc_pipeline_base.o imgproc_image.o
+	g++ driver.cc imgproc_pipeline_base.o imgproc_image.o -o pipeline $(LIBS)
+
+imgproc_pipeline_base.o: imgproc_pipeline_base.cc
+	g++ -c imgproc_pipeline_base.cc -o imgproc_pipeline_base.o $(LIBS)
+
+imgproc_image.o: imgproc_image.cc
+	g++ -c imgproc_image.cc -o imgproc_image.o $(LIBS)
 
 imgproc_util.o: imgproc_util.cc
 	g++ -c imgproc_util.cc -o imgproc_util.o $(LIBS)
 
-pipeline: imgproc_pipeline.o image.o
-	g++ pipeline_runner.cc imgproc_pipeline.o image.o $(LIBS)
-
-imgproc_pipeline.o: imgproc_pipeline.cc
-	g++ -c imgproc_pipeline.cc -o imgproc_pipeline.o $(LIBS)
-
-image.o: image.cc
-	g++ -c image.cc -o image.o $(LIBS)
-
 clean:
-	rm -f imgproc *.o
+	rm -f pipeline *.o

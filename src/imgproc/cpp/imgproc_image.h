@@ -1,3 +1,6 @@
+#ifndef _IMGPROC_IMAGE_H
+#define _IMGPROC_IMAGE_H
+
 #include <fstream>
 #include <map>
 #include <string>
@@ -7,15 +10,15 @@
 
 #include "imgproc_defs.h"
 
-class Image
+class ImgProcImage
 {
 public:
 
-    Image();
+    ImgProcImage();
 
-    Image(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const std::string &image_dest = "");
+    ImgProcImage(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const std::string &image_dest = "");
 
-	cv::Mat get_original_image();
+    cv::Mat &get_original_image();
 
     // Adds intermediate image **if in window mode** because intermediate images
     // are not used in other modes. 
@@ -76,3 +79,5 @@ private:
     // Open file stream that metadata will be written to
     std::ofstream *metadata_file;
 };
+
+#endif
