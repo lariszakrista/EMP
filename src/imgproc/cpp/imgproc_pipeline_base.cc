@@ -126,9 +126,9 @@ std::pair<int, int> ImgProcPipelineBase::getRescaledDimensions(const Mat &image,
     given_ratio         = (double) max_w / (double) max_h;
     ratio               = (double) image.cols / (double) image.rows;
     // width
-    dimensions.first    = ratio >  given_ratio ? max_w : cvRound(ratio * (double) max_h);
+    dimensions.first    = ratio > given_ratio ? max_w : cvRound(ratio * (double) max_h);
     // height
-    dimensions.second   = ratio <= given_ratio ? max_h : cvRound(ratio * (double) max_w);
+    dimensions.second   = ratio > given_ratio ? cvRound((double) max_w / ratio) : max_h;
 
     return dimensions;
 }
