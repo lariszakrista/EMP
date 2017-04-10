@@ -1,16 +1,13 @@
 #ifndef IMGPROC_H
 #define IMGPROC_H
 
-#include <libgen.h>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <ctime>
 #include <vector>
+#include <string>
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/core/core.hpp>
+
 #include "imgproc_defs.h"
 #include "image.h"
 
@@ -29,11 +26,17 @@ class ImgProcPipeline{
 		
 		// Preprocesses the image before image processing
 		void preprocess(const cv::Mat &, cv::Mat &);
-
+		
 		std::pair<int, int> getRescaledDimensions(const cv::Mat &, int, int);
+		
+		// Rescales the circle found based on the Mat image passed in 
+		cv::Vec3f rescaleCircle(const cv::Vec3f &, const cv::Mat &);			
 
 		// Detect circles in the image
-		void find_circles(const cv::Mat &);
+		std::vector<cv::Vec3f> find_circles(const cv::Mat &);
+		
+		// Add the top two circles found to the original image
+		void record_circles(std::vector<cv::Vec3f> , const cv::Mat &);		
 
 		// Invokes get_next_image and then initializes an image object
 		void run_single_image(const cv::Mat &);

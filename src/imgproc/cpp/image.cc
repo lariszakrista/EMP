@@ -1,6 +1,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include "image.h"
+#include <iostream>
 
 using std::endl;
 using std::map;
@@ -57,6 +58,7 @@ bool Image::record()
         break;
 
     case BATCH:
+
         // Save processed image
         imwrite(this->dest, this->processed);
 
