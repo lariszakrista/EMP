@@ -264,18 +264,11 @@ HTML = """
                                 <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 						    </th>
-						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)" style="cursor: pointer;">
-							    Pre-process time (secs)
-                                <i id="pre_proc_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
-                                <i id="pre_proc_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
-						    </th>
-                    		<th class="mdl-data-table__cell--non-numeric" onclick="sort_table(5)" style="cursor: pointer;">
-							    Hough time (secs)
-                                <i id="hough_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
-                                <i id="hough_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
+						    <th class="mdl-data-table__cell--non-numeric">
+							    Running times (secs)
 						    </th>
                     		<th class="mdl-data-table__cell--non-numeric">
-							    Discarded Reasons
+							    Comments
 						    </th>
 					    </tr>
 					</thead>
@@ -300,13 +293,14 @@ HTML = """
                                 Radius difference: <br>{{item.moon_rad_diff}}<br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-							    {{item.pre_proc_time}}
+						        {{ item.times }}
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-							    {{item.hough_time}}
-						    </td>
-						    <td class="mdl-data-table__cell--non-numeric">
-							    {{item.discard_reasons}}
+							    <ul>
+							    {% for comment in item.comments %}
+							        <li> {{ comment }} </li>
+							    {% endfor %}
+							    </ul>
 						    </td>
 					    </tr>
                     {% endfor %}
@@ -349,7 +343,7 @@ def read_metadata(original_path, processed_path):
 
         position = dict(sun = literal_eval(tokens[2]), moon = literal_eval(tokens[3]))
 
-        truth_positions[tokens[0]] = position
+        truth_positions[os.path.join(processed_path, tokens[0])] = position
     
     f = open(os.path.join(processed_path, "metadata.txt"), 'r')
 
@@ -357,31 +351,49 @@ def read_metadata(original_path, processed_path):
 
     for line in f.readlines():
         tokens = line.split('|')
-
-        item = dict(image_name = tokens[0], 
-                    original = os.path.join(original_path, tokens[0]), 
-                    processed = os.path.join(processed_path, tokens[0]), 
-                    pre_proc_time = tokens[3], 
-                    hough_time = tokens[4])
-
         
+        path_tokens = tokens[0].split('/')
+        img_name = path_tokens[len(path_tokens) - 1]
+
+        item = dict(image_name = img_name, 
+                    original = os.path.join(original_path, img_name), 
+                    processed = os.path.join(processed_path, img_name))
+                    
+        times = {}
+        comments = []
+        token_count = 0
+        for token in tokens:
+            if token.startswith('t'):
+                tup = literal_eval(token[1:])
+                times[tup[0]] = tup[1]
+            elif token.startswith('c'):
+                None
+            elif token_count > 1 and token != "\n":
+                comments.append(token)
+            else:
+                None
+            token_count += 1
+                
+        item['times'] = times
+        item['comments'] = comments
+
         if truth_positions[tokens[0]]['moon'] is not None:
-            moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2]), truth_positions[tokens[0]]['moon'])
+            moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2][1:]), truth_positions[tokens[0]]['moon'])
             item['moon_center_diff'] = moon_center_offset
             item['moon_rad_diff'] = moon_radius_diff
         else:
             item['moon_center_diff'] = "No Moon in ground truth"
             item['moon_rad_diff'] = "No Moon in ground truth"
 
-        sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1]), truth_positions[tokens[0]]['sun'])
+        sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1][1:]), truth_positions[tokens[0]]['sun'])
 
         item['sun_center_diff'] = sun_center_offset
         item['sun_rad_diff'] = sun_radius_diff
 
-         
+        #print (item) 
 
         if tokens[5] == "1":
-            item['discard_reasons'] = '<br>'.join(item.strip() for item in tokens[6].split(';'))
+            item['comments'] = '<br>'.join(item.strip() for item in tokens[6].split(';'))
 
         metadata_items.append(item)
 
