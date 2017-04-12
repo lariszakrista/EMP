@@ -399,7 +399,7 @@ def read_metadata(original_path, processed_path):
 
     return metadata_items
     
-def build_html_doc(original_path, processed_path, output_file_dir):
+def build_html_doc(original_path, processed_path):
 
     #get all 40 characters of the commit hash
     commit_hash = str(subprocess.check_output("git rev-parse HEAD", shell=True))[2:42]
@@ -411,18 +411,18 @@ def build_html_doc(original_path, processed_path, output_file_dir):
 
     metadata = read_metadata(original_path, processed_path)
 
-    f = open(os.path.join(output_file_dir, OUTPUT_FILE), 'w')
+    f = open(os.path.join(processed_path, OUTPUT_FILE), 'w')
     f.write( Environment().from_string(HTML).render(title=page_title, 
                                                     gitrev=commit_hash, date=date_time, items=metadata) )
 
 def main():
 
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 3:
         print ("Please run this script in the form:")
-        print ("$python image_proc_output.py [/path/to/original/images] [/path/to/processed/images] [/output/html/dir]")
+        print ("$python3 image_proc_output.py [/path/to/original/images] [/path/to/processed/images]")
         return 
 
-    build_html_doc(sys.argv[1], sys.argv[2], sys.argv[3])
+    build_html_doc(sys.argv[1], sys.argv[2])
 
 if __name__ == '__main__':
 

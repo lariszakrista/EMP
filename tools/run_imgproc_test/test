@@ -36,6 +36,6 @@ make
 ./pipeline $SRC_IMG_FILE batch $OUTPUT_DIR
 popd
 
-python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR $OUTPUT_DIR
+python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR
 google-chrome $OUTPUT_DIR/output.html
  
