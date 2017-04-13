@@ -41,184 +41,167 @@ HTML = """
 		}
 	</style>
 
-	<script>
+<script>
 
-        var prev_col_name = " ";
-        var ascending = true;
+    var prev_col_name = " ";
+    var ascending = true;
 
-        function hide_all_arrows() {
+    function hide_all_arrows() {
 
-            document.getElementById("sun_diff_up").style.display = "none";
-            document.getElementById("sun_diff_down").style.display = "none";
+        document.getElementById("sun_diff_up").style.display = "none";
+        document.getElementById("sun_diff_down").style.display = "none";
 
-            document.getElementById("moon_diff_up").style.display = "none";
-            document.getElementById("moon_diff_down").style.display = "none";
+        document.getElementById("moon_diff_up").style.display = "none";
+        document.getElementById("moon_diff_down").style.display = "none";
 
-            document.getElementById("pre_proc_up").style.display = "none";
-            document.getElementById("pre_proc_down").style.display = "none";
+        document.getElementById("times_up").style.display = "none";
+        document.getElementById("times_down").style.display = "none";
 
-            document.getElementById("hough_up").style.display = "none";
-            document.getElementById("hough_down").style.display = "none";
+    }
 
+    function sun_diff_comparator(row1, row2) {
+        var col_val = 2;
+
+        var row1_cell = row1.getElementsByTagName("td")[col_val];
+        var row2_cell = row2.getElementsByTagName("td")[col_val];
+
+        var row1_result = row1_cell.innerHTML.split("<br>");
+        var row2_result = row2_cell.innerHTML.split("<br>");
+
+        var row1_val = row1_result[1];
+        row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+
+        var row2_val = row2_result[1];
+        row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
+
+        if (row1_val < row2_val) {
+            return -1;
         }
+        if (row1_val > row2_val) {
+            return 1;
+        }
+        return 0;
+    }
 
-        function sun_diff_comparator(row1, row2) {
-            var col_val = 2;
+    function moon_diff_comparator(row1, row2) {
+        var col_val = 3;
 
-            var row1_cell = row1.getElementsByTagName("td")[col_val];
-            var row2_cell = row2.getElementsByTagName("td")[col_val];
+        var row1_cell = row1.getElementsByTagName("td")[col_val];
+        var row2_cell = row2.getElementsByTagName("td")[col_val];
 
-            var row1_result = row1_cell.innerHTML.split("<br>");
-            var row2_result = row2_cell.innerHTML.split("<br>");
+        var row1_result = row1_cell.innerHTML.split("<br>");
+        var row2_result = row2_cell.innerHTML.split("<br>");
 
-            var row1_val = row1_result[1];
+        var row1_val = row1_result[1];
+        if (row1_val.toLowerCase().includes("no moon")) {
+            row1_val = 10000;
+        } else {
             row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+        }
 
-            var row2_val = row2_result[1];
+        var row2_val = row2_result[1];
+        if (row2_val.toLowerCase().includes("no moon")) {
+            row2_val = 10000;
+        } else {
             row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
-
-            if (row1_val < row2_val) {
-                return -1;
-            }
-            if (row1_val > row2_val) {
-                return 1;
-            }
-            return 0;
         }
 
-        function moon_diff_comparator(row1, row2) {
-            var col_val = 3;
+        if (row1_val < row2_val) {
+            return -1;
+        }
+        if (row1_val > row2_val) {
+            return 1;
+        }
+        return 0;
+    }
 
-            var row1_cell = row1.getElementsByTagName("td")[col_val];
-            var row2_cell = row2.getElementsByTagName("td")[col_val];
+    function times_comparator(row1, row2) {
+        var col_val = 4;
 
-            var row1_result = row1_cell.innerHTML.split("<br>");
-            var row2_result = row2_cell.innerHTML.split("<br>");
+        var row1_cell = row1.getElementsByTagName("td")[col_val];
+        var row2_cell = row2.getElementsByTagName("td")[col_val];
 
-            var row1_val = row1_result[1];
-            if (row1_val.toLowerCase().includes("no moon")) {
-                row1_val = 10000;
-            } else {
-                row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+        var row1_list = row1_cell.getElementsByTagName("ul")[0];
+        var row2_list = row2_cell.getElementsByTagName("ul")[0];
+
+        var row1_val = 0.0;
+        for (element in row1_list.children) {
+            if (typeof(row1_list.children[element].innerHTML) != 'undefined') {
+                row1_val += parseFloat(row1_list.children[element].innerHTML.split(":")[1]);
             }
-
-            var row2_val = row2_result[1];
-            if (row2_val.toLowerCase().includes("no moon")) {
-                row2_val = 10000;
-            } else {
-                row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
-            }
-
-            if (row1_val < row2_val) {
-                return -1;
-            }
-            if (row1_val > row2_val) {
-                return 1;
-            }
-            return 0;
         }
 
-        function pre_proc_comparator(row1, row2) {
-            var col_val = 4;
-
-            var row1_cell = row1.getElementsByTagName("td")[col_val];
-            var row2_cell = row2.getElementsByTagName("td")[col_val];
-
-            var row1_result = row1_cell.innerHTML.split(" ");
-            var row2_result = row2_cell.innerHTML.split(" ");
-
-            var row1_val = row1_result[4];
-            var row2_val = row2_result[4];
-
-            if (row1_val < row2_val) {
-                return -1;
+        var row2_val = 0.0;
+        for (element in row2_list.children) {
+            if (typeof(row2_list.children[element].innerHTML) != 'undefined') {
+                row2_val += parseFloat(row2_list.children[element].innerHTML.split(":")[1]);
             }
-            if (row1_val > row2_val) {
-                return 1;
-            }
-            return 0;
         }
 
-        function hough_comparator(row1, row2) {
-            var col_val = 5;
+        if (row1_val < row2_val) {
+            return -1;
+        }
+        if (row1_val > row2_val) {
+            return 1;
+        }
+        return 0;
+    }
 
-            row1_cell = row1.getElementsByTagName("td")[col_val];
-            row2_cell = row2.getElementsByTagName("td")[col_val];
+    function sort_table(n) {
 
-            var row1_result = row1_cell.innerHTML.split(" ");
-            var row2_result = row2_cell.innerHTML.split(" ");
+        var table = document.getElementById("eclipse_data_table");
+        var table_body = document.getElementById("eclipse_data_table_body");
 
-            var row1_val = row1_result[4];
-            var row2_val = row2_result[4];
+        var row_array = Array.prototype.slice.call(table_body.children);
 
-            if (row1_val < row2_val) {
-                return -1;
-            }
-            if (row1_val > row2_val) {
-                return 1;
-            }
-            return 0;
+        var start = performance.now();
+
+        switch(n) {
+            case 2:
+                var col_name = "sun_diff";
+                row_array.sort(sun_diff_comparator);
+                break;
+            case 3:
+                var col_name = "moon_diff";
+                row_array.sort(moon_diff_comparator);
+                break;
+            case 4:
+                var col_name = "times";
+                row_array.sort(times_comparator);
+                break;
+            default:
+                console.log("error this isn't possible");
         }
 
-        function sort_table(n) {
+        if(prev_col_name == col_name) {
+            ascending = !ascending;
+        } else {
+            ascending = true;
+        }
 
-            var table = document.getElementById("eclipse_data_table");
-            var table_body = document.getElementById("eclipse_data_table_body");
-
-            var row_array = Array.prototype.slice.call(table_body.children);
-
-            var start = performance.now();
-
-            switch(n) {
-                case 2:
-                    var col_name = "sun_diff";
-                    row_array.sort(sun_diff_comparator);
-                    break;
-                case 3:
-                    var col_name = "moon_diff";
-                    row_array.sort(moon_diff_comparator);
-                    break;
-                case 4:
-                    var col_name = "pre_proc";
-                    row_array.sort(pre_proc_comparator);
-                    break;
-                case 5:
-                    var col_name = "hough";
-                    row_array.sort(hough_comparator);
-                    break;
-                defult:
-                    console.log("error this isn't possible");
+        if (ascending) {
+            for (var i = 0; i < row_array.length; i++) {
+                table.children[1].appendChild(row_array[i]);
             }
-
-            if(prev_col_name == col_name) {
-                ascending = !ascending;
-            } else {
-                ascending = true;
+            var arrow_direction = "up";
+        } else {
+            for (var i = row_array.length -1; i > -1; i--) {
+                table.children[1].appendChild(row_array[i]);
             }
+            var arrow_direction = "down";
+        }
 
-            if (ascending) {
-                for (var i = 0; i < row_array.length; i++) {
-                    table.children[1].appendChild(row_array[i]);
-                }
-                var arrow_direction = "up";
-            } else {
-                for (var i = row_array.length -1; i > -1; i--) {
-                    table.children[1].appendChild(row_array[i]);
-                }
-                var arrow_direction = "down";
-            }
+        hide_all_arrows();
+        document.getElementById(col_name + "_" + arrow_direction).style.display = "";
 
-            hide_all_arrows();
-            document.getElementById(col_name + "_" + arrow_direction).style.display = "";
+        var end = performance.now();
+        var time = end - start;
+        console.log('Execution time: ' + time);
 
-            var end = performance.now();
-            var time = end - start;
-            console.log('Execution time: ' + time);
+        prev_col_name = col_name;
+    }
 
-            prev_col_name = col_name;
-        }       
-
-	</script>
+</script>
 </head>
 <body>
 
@@ -245,33 +228,35 @@ HTML = """
                 <h3>Output Table</h3>
 
                 <table id="eclipse_data_table" class="mdl-data-table mdl-js-data-table">
-				    <thead>
-					    <tr>
-						    <th class="mdl-data-table__cell--non-numeric">
-							    Original
-						    </th>
-						    <th class="mdl-data-table__cell--non-numeric">
-							    Processed
-						    </th>
+                    <thead>
+                        <tr>
+	                        <th class="mdl-data-table__cell--non-numeric">
+		                        Original
+	                        </th>
+	                        <th class="mdl-data-table__cell--non-numeric">
+		                        Processed
+	                        </th>
 
-						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
-							    Sun Diff (px)
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
+		                        Sun Diff (px)
                                 <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="sun_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
-						    </th>
-						    <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
-							    Moon Diff (px)
+	                        </th>
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
+		                        Moon Diff (px)
                                 <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
-						    </th>
-						    <th class="mdl-data-table__cell--non-numeric">
-							    Running times (secs)
-						    </th>
-                    		<th class="mdl-data-table__cell--non-numeric">
-							    Comments
-						    </th>
-					    </tr>
-					</thead>
+	                        </th>
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)" style="cursor: pointer;">
+		                        Running times (secs)
+                                <i id="times_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="times_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
+	                        </th>
+		                    <th class="mdl-data-table__cell--non-numeric">
+		                        Comments
+	                        </th>
+                        </tr>
+                    </thead>
 				    <tbody id="eclipse_data_table_body">
                     {% for item in items %}
 					    <tr>
