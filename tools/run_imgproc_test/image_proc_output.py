@@ -293,7 +293,11 @@ HTML = """
                                 Radius difference: <br>{{item.moon_rad_diff}}<br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-						        {{ item.times }}
+						        <ul>
+						        {% for time in item.times %}
+						            <li> {{ time }} </li>
+						        {% endfor %}
+						        </ul>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
 							    <ul>
@@ -359,13 +363,13 @@ def read_metadata(original_path, processed_path):
                     original = os.path.join(original_path, img_name), 
                     processed = os.path.join(processed_path, img_name))
                     
-        times = {}
+        times = []
         comments = []
         token_count = 0
         for token in tokens:
             if token.startswith('t'):
                 tup = literal_eval(token[1:])
-                times[tup[0]] = tup[1]
+                times.append(tup[0] + ":\t" + str(tup[1]))
             elif token.startswith('c'):
                 None
             elif token_count > 1 and token != "\n":
