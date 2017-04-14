@@ -262,10 +262,10 @@ HTML = """
                     {% for item in items %}
 					    <tr>
 						    <td class="mdl-data-table__cell--non-numeric img-cell">
-							    <img src={{item.original}}> <br>
+							    <img src="{{item.original}}"> <br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-							    <img src={{item.processed}}>
+							    <img src="{{item.processed}}">
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
 							    Center offset: <br>{{item.sun_center_diff}}<br>
@@ -305,8 +305,8 @@ HTML = """
 </html>
 """
 
-def calc_position_diff(result, truth):
 
+def calc_position_diff(result, truth):
     result_pos = (result[0], result[1])
     truth_pos = (truth[0], truth[1])
 
@@ -316,14 +316,14 @@ def calc_position_diff(result, truth):
 
     return center_offset, radius_diff
 
-def euclidean_distance(circle1, circle2):
 
+def euclidean_distance(circle1, circle2):
 	dx = circle1[0] - circle2[0]
 	dy = circle1[1] - circle2[1]
-
 	return math.sqrt((dx ** 2) + (dy ** 2))
 
-def read_metadata(original_path, processed_path):
+
+def read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter):
 
     truth_file = open(os.path.join(original_path, TRUTH_FILE), 'r')
 
@@ -345,9 +345,11 @@ def read_metadata(original_path, processed_path):
         path_tokens = tokens[0].split('/')
         img_name = path_tokens[len(path_tokens) - 1]
 
-        item = dict(image_name = img_name, 
-                    original = os.path.join(original_path, img_name), 
-                    processed = os.path.join(processed_path, img_name))
+        item = dict(
+            image_name = img_name, 
+            original   = util.gcs_url(img_name, original_bucket),
+            processed  = util.gcs_url(converter.get_run_specific_filename(img_name), processed_bucket)
+        )
                     
         times = []
         comments = []
@@ -380,40 +382,49 @@ def read_metadata(original_path, processed_path):
         item['sun_center_diff'] = sun_center_offset
         item['sun_rad_diff'] = sun_radius_diff
 
-        #print (item) 
-
         if tokens[5] == "1":
             item['comments'] = '<br>'.join(item.strip() for item in tokens[6].split(';'))
 
         metadata_items.append(item)
 
     return metadata_items
+
     
-def build_html_doc(original_path, processed_path):
+def build_html_doc(original_path, processed_path, original_bucket, processed_bucket, converter):
 
-    commit_hash = util.current_git_hash_str()
-
-    #set date/time for title
-    date_time = time.strftime("%c", time.localtime())
+    # set date/time for title
+    date_time = time.strftime("%c", converter.datetime.timetuple())
 
     page_title = "Eclipse Image Processor Output"
 
-    metadata = read_metadata(original_path, processed_path)
+    metadata = read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter)
 
-    f = open(os.path.join(processed_path, OUTPUT_FILE), 'w')
-    f.write( Environment().from_string(HTML).render(title=page_title, 
-                                                    gitrev=commit_hash, date=date_time, items=metadata) )
+    html_path = os.path.join(processed_path, OUTPUT_FILE)
+    f = open(html_path, 'w')
+    f.write(Environment().from_string(HTML).render(title=page_title, gitrev=converter.git_hash, date=date_time, items=metadata))
+    
+    return html_path
+
 
 def main():
 
-    if len(sys.argv) < 3:
-        print ("Please run this script in the form:")
-        print ("$python3 image_proc_output.py [/path/to/original/images] [/path/to/processed/images]")
+    if len(sys.argv) < 5:
+        params = 'path/to/original/images path/to/processed/images original_image_gcs_bucket processed_gcs_bucket'
+        print('Please run this script in the form:')
+        print('\n\t$ python3 {} {}\n'.format(os.path.basename(__file__), params))
         return 
 
-    build_html_doc(sys.argv[1], sys.argv[2])
+    original_dir, processed_dir, original_bucket, processed_bucket = sys.argv[1:5]
+
+    converter = util.FilenameConverter()    
+    html_path = build_html_doc(original_dir, processed_dir, original_bucket, processed_bucket, converter)
+    html_path = converter.get_run_specific_filename(html_path)
+
+    converter.commit(processed_dir)
+
+    print('WEB_URL:{}'.format(util.gcs_url(html_path, processed_bucket)))
+
 
 if __name__ == '__main__':
-
     main()
 

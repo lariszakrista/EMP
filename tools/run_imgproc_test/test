@@ -1,19 +1,23 @@
 set "-e"
 
-if [ $# = 0 ]; then
-    echo "Usage: test image_dir [download]"
+if [ $# -lt 2 ]; then
+    echo "Usage: test working_dir src_gcs_bucket [download]"
     exit
 fi
 
+SRC_IMG_BUCKET=$2
+PROCESSED_BUCKET=eclipse_imgproc_output
+
 BASE_DIR=$(cd $1 && pwd)
-SRC_IMG_BUCKET=eclipse_image_ground_truth_dataset_renamed
 SRC_IMG_DIR=$BASE_DIR/$SRC_IMG_BUCKET
 SRC_IMG_FILE=$SRC_IMG_DIR/images.txt
 OUTPUT_DIR=$BASE_DIR/output
 
+TMP_FILE=$OUTPUT_DIR/__tmp_python_output
+
 if [ ! -d $SRC_IMG_DIR ]; then
     
-    if [ $2 = download ]; then
+    if [ $3 = download ]; then
         mkdir $SRC_IMG_DIR
         echo "Saving images from GCS to $SRC_IMG_DIR..."
         gsutil -m cp "gs://$SRC_IMG_BUCKET/*" $SRC_IMG_DIR
@@ -36,6 +40,12 @@ make
 ./pipeline $SRC_IMG_FILE batch $OUTPUT_DIR
 popd
 
-python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR
-google-chrome $OUTPUT_DIR/output.html
- 
+# Create html output, rename image files
+python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR $SRC_IMG_BUCKET $PROCESSED_BUCKET > $TMP_FILE
+
+# Upload processed image files, html file to GCS
+gsutil -m cp $OUTPUT_DIR/* gs://$PROCESSED_BUCKET
+
+# Output Web URL
+cat $TMP_FILE
+rm -f $TMP_FILE
