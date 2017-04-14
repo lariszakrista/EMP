@@ -1,10 +1,11 @@
-import subprocess
 from jinja2 import Environment, Template
 import time
 import os
 import sys
 from ast import literal_eval
 import math
+
+import util
 
 OUTPUT_FILE = "output.html"
 TRUTH_FILE = "image_data.txt"
@@ -390,8 +391,7 @@ def read_metadata(original_path, processed_path):
     
 def build_html_doc(original_path, processed_path):
 
-    #get all 40 characters of the commit hash
-    commit_hash = str(subprocess.check_output("git rev-parse HEAD", shell=True))[2:42]
+    commit_hash = util.current_git_hash_str()
 
     #set date/time for title
     date_time = time.strftime("%c", time.localtime())
