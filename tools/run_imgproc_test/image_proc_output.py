@@ -69,11 +69,11 @@ HTML = """
         var row1_result = row1_cell.innerHTML.split("<br>");
         var row2_result = row2_cell.innerHTML.split("<br>");
 
-        var row1_val = row1_result[1];
-        row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+        var row1_val = row1_result[4];
+        row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[7]));
 
-        var row2_val = row2_result[1];
-        row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
+        var row2_val = row2_result[4];
+        row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[7]));
 
         if (row1_val < row2_val) {
             return -1;
@@ -93,18 +93,18 @@ HTML = """
         var row1_result = row1_cell.innerHTML.split("<br>");
         var row2_result = row2_cell.innerHTML.split("<br>");
 
-        var row1_val = row1_result[1];
+        var row1_val = row1_result[4];
         if (row1_val.toLowerCase().includes("no moon")) {
             row1_val = 10000;
         } else {
-            row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[4]));
+            row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[7]));
         }
 
-        var row2_val = row2_result[1];
+        var row2_val = row2_result[4];
         if (row2_val.toLowerCase().includes("no moon")) {
             row2_val = 10000;
         } else {
-            row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[4]));
+            row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[7]));
         }
 
         if (row1_val < row2_val) {
@@ -239,12 +239,12 @@ HTML = """
 	                        </th>
 
 	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
-		                        Sun Diff (px)
+		                        Sun Results
                                 <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="sun_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 	                        </th>
 	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
-		                        Moon Diff (px)
+		                        Moon Results
                                 <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 	                        </th>
@@ -268,15 +268,19 @@ HTML = """
 							    <img src="{{item.processed}}">
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
-							    Center offset: <br>{{item.sun_center_diff}}<br>
+						        Found circle (cx, cy, r): <br>{{item.found_sun}}<br>
                                 <br>
-                                Radius difference: <br>{{item.sun_rad_diff}}<br>
+							    Center offset (px): <br>{{item.sun_center_diff}}<br>
+                                <br>
+                                Radius difference (px): <br>{{item.sun_rad_diff}}<br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
                                 {{ item.no_moon }}
-							    Center offset: <br>{{item.moon_center_diff}}<br>
+                                Found circle (cx, cy, r): <br>{{item.found_moon}}<br>
                                 <br>
-                                Radius difference: <br>{{item.moon_rad_diff}}<br>
+							    Center offset (px): <br>{{item.moon_center_diff}}<br>
+                                <br>
+                                Radius difference (px): <br>{{item.moon_rad_diff}}<br>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
 						        <ul>
@@ -342,8 +346,7 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
     for line in f.readlines():
         tokens = line.split('|')
         
-        path_tokens = tokens[0].split('/')
-        img_name = path_tokens[len(path_tokens) - 1]
+        img_name = os.path.basename(tokens[0])
 
         item = dict(
             image_name = img_name, 
@@ -368,7 +371,17 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
                 
         item['times'] = times
         item['comments'] = comments
-
+        
+        if tokens[1] is not None:
+            item['found_sun'] = literal_eval(tokens[1][1:])
+        else:
+            item['found_sun'] = "undefined"
+            
+        if tokens[2] is not None:
+            item['found_moon'] = literal_eval(tokens[2][1:])
+        else:
+            item['found_sun'] = "undefined"
+        
         if truth_positions[img_name]['moon'] is not None:
             moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2][1:]), truth_positions[img_name]['moon'])
             item['moon_center_diff'] = moon_center_offset
