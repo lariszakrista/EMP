@@ -333,7 +333,7 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
 
         position = dict(sun = literal_eval(tokens[2]), moon = literal_eval(tokens[3]))
 
-        truth_positions[os.path.join(processed_path, tokens[0])] = position
+        truth_positions[tokens[0]] = position
     
     f = open(os.path.join(processed_path, "metadata.txt"), 'r')
 
@@ -369,21 +369,18 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
         item['times'] = times
         item['comments'] = comments
 
-        if truth_positions[tokens[0]]['moon'] is not None:
-            moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2][1:]), truth_positions[tokens[0]]['moon'])
+        if truth_positions[img_name]['moon'] is not None:
+            moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2][1:]), truth_positions[img_name]['moon'])
             item['moon_center_diff'] = moon_center_offset
             item['moon_rad_diff'] = moon_radius_diff
         else:
             item['moon_center_diff'] = "No Moon in ground truth"
             item['moon_rad_diff'] = "No Moon in ground truth"
 
-        sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1][1:]), truth_positions[tokens[0]]['sun'])
+        sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1][1:]), truth_positions[img_name]['sun'])
 
         item['sun_center_diff'] = sun_center_offset
         item['sun_rad_diff'] = sun_radius_diff
-
-        if tokens[5] == "1":
-            item['comments'] = '<br>'.join(item.strip() for item in tokens[6].split(';'))
 
         metadata_items.append(item)
 
@@ -420,7 +417,7 @@ def main():
     html_path = build_html_doc(original_dir, processed_dir, original_bucket, processed_bucket, converter)
     html_path = converter.get_run_specific_filename(html_path)
 
-    converter.commit(processed_dir)
+    #converter.commit(processed_dir)
 
     print('WEB_URL:{}'.format(util.gcs_url(html_path, processed_bucket)))
 
