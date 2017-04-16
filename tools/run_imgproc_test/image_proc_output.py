@@ -45,6 +45,12 @@ HTML = """
 
 <script>
 
+    var COLUMN_CHOICES = {
+        SUN : 2,
+        MOON : 3,
+        TIMES : 4
+    };
+
     var prev_col_name = " ";
     var ascending = true;
     
@@ -168,15 +174,15 @@ HTML = """
         var start = performance.now();
 
         switch(n) {
-            case 2:
+            case COLUMN_CHOICES.SUN:
                 var col_name = "sun_diff";
                 row_array.sort(sun_diff_comparator);
                 break;
-            case 3:
+            case COLUMN_CHOICES.MOON:
                 var col_name = "moon_diff";
                 row_array.sort(moon_diff_comparator);
                 break;
-            case 4:
+            case COLUMN_CHOICES.TIMES:
                 var col_name = "times";
                 row_array.sort(times_comparator);
                 break;
@@ -248,17 +254,17 @@ HTML = """
 		                        Processed
 	                        </th>
 
-	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(2)" style="cursor: pointer;">
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(COLUMN_CHOICES.SUN)" style="cursor: pointer;">
 		                        Sun Results
                                 <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="sun_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 	                        </th>
-	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(3)" style="cursor: pointer;">
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(COLUMN_CHOICES.MOON)" style="cursor: pointer;">
 		                        Moon Results
                                 <i id="moon_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="moon_diff_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 	                        </th>
-	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(4)" style="cursor: pointer;">
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(COLUMN_CHOICES.TIMES)" style="cursor: pointer;">
 		                        Running times (secs)
                                 <i id="times_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="times_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
