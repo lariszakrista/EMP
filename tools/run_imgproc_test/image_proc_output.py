@@ -12,6 +12,7 @@ TRUTH_FILE = "image_data.txt"
 
 HTML = """
 <script defer src="https://code.getmdl.io/1.2.1/material.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
@@ -46,6 +47,15 @@ HTML = """
 
     var prev_col_name = " ";
     var ascending = true;
+    
+    function toggle_circles(element) {
+        $(element).next().slideToggle();
+        if(element.innerText == "expand circles") {
+            element.innerHTML = "collapse circles"
+        } else if(element.innerText == "collapse circles") {
+            element.innerHTML = "expand circles"
+        }
+    }
 
     function hide_all_arrows() {
 
@@ -253,6 +263,9 @@ HTML = """
                                 <i id="times_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
                                 <i id="times_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 	                        </th>
+	                        <th class="mdl-data-table__cell--non-numeric">
+		                        All Found Circles
+	                        </th>
 		                    <th class="mdl-data-table__cell--non-numeric">
 		                        Comments
 	                        </th>
@@ -288,6 +301,16 @@ HTML = """
 						            <li> {{ time }} </li>
 						        {% endfor %}
 						        </ul>
+						    </td>
+						    <td class="mdl-data-table__cell--non-numeric">
+						        <span id="exp_collapse" style="cursor: pointer;" onclick="toggle_circles(this)"> expand circles </span>
+						        <div style="display: none;">
+						            <ul>
+							        {% for circle in item.circles %}
+							            <li> {{ circle }} </li>
+							        {% endfor %}
+							        </ul>
+						        </div>
 						    </td>
 						    <td class="mdl-data-table__cell--non-numeric">
 							    <ul>
@@ -357,12 +380,13 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
         times = []
         comments = []
         token_count = 0
+        circles = []
         for token in tokens:
             if token.startswith('t'):
                 tup = literal_eval(token[1:])
                 times.append(tup[0] + ":\t" + str(tup[1]))
             elif token.startswith('c'):
-                None
+                circles.append(literal_eval(token[1:]))
             elif token_count > 1 and token != "\n":
                 comments.append(token)
             else:
@@ -371,6 +395,7 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
                 
         item['times'] = times
         item['comments'] = comments
+        item['circles'] = circles
         
         if tokens[1] is not None:
             item['found_sun'] = literal_eval(tokens[1][1:])
