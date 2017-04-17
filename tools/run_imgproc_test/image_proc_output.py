@@ -239,8 +239,11 @@ HTML = """
                 <h3 id="revision">Git Revision</h3>
                     <p>{{ gitrev }}</p>
 
-		<h3> Test Timestamp:</h3>
-			<p>{{ date }}</p>
+		        <h3>Test Timestamp:</h3>
+			        <p>{{ date }}</p>
+
+                <h3>Pipeline Arguments</h3>
+                    <p>{{ pipeline_flags }}</p>
 
                 <h3>Output Table</h3>
 
@@ -445,7 +448,7 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
     return metadata_items
 
     
-def build_html_doc(original_path, processed_path, original_bucket, processed_bucket, converter):
+def build_html_doc(original_path, processed_path, original_bucket, processed_bucket, converter, pipeline_flags):
 
     # set date/time for title
     date_time = time.strftime("%c", converter.datetime.timetuple())
@@ -454,9 +457,12 @@ def build_html_doc(original_path, processed_path, original_bucket, processed_buc
 
     metadata = read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter)
 
+    document = Environment().from_string(HTML)
+
     html_path = os.path.join(processed_path, OUTPUT_FILE)
     f = open(html_path, 'w')
-    f.write(Environment().from_string(HTML).render(title=page_title, gitrev=converter.git_hash, date=date_time, items=metadata))
+    f.write(document.render(title=page_title, gitrev=converter.git_hash, 
+                            date=date_time, pipeline_flags=pipeline_flags, items=metadata))
     
     return html_path
 
@@ -471,8 +477,13 @@ def main():
 
     original_dir, processed_dir, original_bucket, processed_bucket = sys.argv[1:5]
 
+    try:
+        pipeline_flags = ' '.join(sys.argv[5:])
+    except IndexError:
+        pipeline_flags = ''
+
     converter = util.FilenameConverter()    
-    html_path = build_html_doc(original_dir, processed_dir, original_bucket, processed_bucket, converter)
+    html_path = build_html_doc(original_dir, processed_dir, original_bucket, processed_bucket, converter, pipeline_flags)
     html_path = converter.get_run_specific_filename(html_path)
 
     converter.commit(processed_dir)

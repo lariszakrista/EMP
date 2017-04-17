@@ -51,7 +51,7 @@ make
 popd
 
 # Create html output, rename image files
-python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR $SRC_IMG_BUCKET $PROCESSED_BUCKET > $TMP_FILE
+python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR $SRC_IMG_BUCKET $PROCESSED_BUCKET $PIPELINE_FLAGS > $TMP_FILE
 
 # Upload processed image files, html file to GCS
 gsutil -m cp $OUTPUT_DIR/* gs://$PROCESSED_BUCKET
