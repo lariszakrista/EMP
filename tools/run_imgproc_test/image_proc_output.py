@@ -242,15 +242,16 @@ HTML = """
 		
 		<main class="drawer-tab mdl-layout__content">
 			<div class="page-content">
-
-                <h3 id="revision">Git Revision</h3>
-                    <p>{{ gitrev }}</p>
-
-		        <h3>Test Timestamp:</h3>
-			        <p>{{ date }}</p>
-
-                <h3>Pipeline Arguments</h3>
-                    <p>{{ pipeline_flags }}</p>
+			
+			    <h3>Run Metrics</h3>
+			        <ul>
+			            <li>Git Revision: {{ gitrev }}</li>
+			            <li>Timestamp: {{ date }}</li>
+			            <li>Pipeline Arguments: {{ pipeline_flags }}</li>
+			            <li>GCS Source Bucket: {{ gcs_src }}</li>
+			            <li>Time Score: {{ time_score }}</li>
+			            <li>Position Score: {{ pos_score }}</li>
+			        </ul> 
 
                 <h3>Output Table</h3>
 
@@ -386,6 +387,10 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
     f = open(os.path.join(processed_path, "metadata.txt"), 'r')
 
     metadata_items = []
+    time_score = 0
+    time_count = 0
+    pos_sum = 0
+    pos_count = 0
 
     for line in f.readlines():
         tokens = line.split('|')
@@ -406,6 +411,9 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
             if token.startswith('t'):
                 tup = literal_eval(token[1:])
                 times.append(tup[0] + ":\t" + str(tup[1]))
+                
+                time_count += 1
+                time_score += tup[1]
             elif token.startswith('c'):
                 circles.append(literal_eval(token[1:]))
             elif token_count > 1 and token != "\n":
@@ -449,10 +457,20 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
             
             item['sun_center_diff'] = "No ground truth"
             item['sun_rad_diff'] = "No ground truth"
+            
+        if tokens[1] is not None and truth_positions[img_name]['sun'] is not None:
+            pos_sum += (sun_center_offset + sun_radius_diff)
+            pos_count += 1
+        if tokens[2] is not None and truth_positions[img_name]['moon'] is not None:
+            pos_sum += (moon_center_offset + moon_radius_diff)
+            pos_count += 1
 
         metadata_items.append(item)
+    
+    time_score /= time_count
+    pos_score = pos_sum / pos_count
 
-    return metadata_items
+    return metadata_items, time_score, pos_score
 
     
 def build_html_doc(original_path, processed_path, original_bucket, processed_bucket, converter, pipeline_flags):
@@ -462,14 +480,15 @@ def build_html_doc(original_path, processed_path, original_bucket, processed_buc
 
     page_title = "Eclipse Image Processor Output"
 
-    metadata = read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter)
+    metadata, time_score, pos_score = read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter)
 
     document = Environment().from_string(HTML)
 
     html_path = os.path.join(processed_path, OUTPUT_FILE)
     f = open(html_path, 'w')
     f.write(document.render(title=page_title, gitrev=converter.git_hash, 
-                            date=date_time, pipeline_flags=pipeline_flags, items=metadata))
+                            date=date_time, pipeline_flags=pipeline_flags, gcs_src=original_bucket, 
+                            time_score=time_score, pos_score=pos_score, items=metadata))
     
     return html_path
 
