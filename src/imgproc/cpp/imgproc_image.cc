@@ -17,6 +17,25 @@ ImgProcImage::ImgProcImage()
 ImgProcImage::ImgProcImage(const cv::Mat &image, ImgprocMode mode, std::ofstream *metadata_file, const string &image_dest)
 : original(image), mode(mode), metadata_file(metadata_file), dest(image_dest)
 {
+    // imwrite requires filenames to end with an image file extension in order to know what 
+    // type of image file to create
+    if (this->mode != BATCH)
+    {
+        return;
+    }
+
+    bool dest_ends_with_valid_ext = false;
+
+    for (int i = 0; i < NUM_SUPPORTED_IMG_EXT; i++)
+    {
+        size_t pos = this->dest.rfind(SUPPORTED_IMG_EXT[i]);
+        dest_ends_with_valid_ext |= (pos == (this->dest.size() - strlen(SUPPORTED_IMG_EXT[i])));
+    }
+
+    if (!dest_ends_with_valid_ext)
+    {
+        this->dest += DEFAULT_IMG_EXT;
+    }
 }
 
 cv::Mat &ImgProcImage::get_original_image()

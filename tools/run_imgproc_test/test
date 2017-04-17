@@ -15,6 +15,8 @@ if [ $# -gt 2 ]; then
     fi
 fi
 
+IMG_EXT="\.jpg\|\.JPG\|\.jpeg\|\.JPEG\|\.png\|\.PNG"
+
 SRC_IMG_BUCKET=$2
 PROCESSED_BUCKET=eclipse_imgproc_output
 
@@ -31,10 +33,7 @@ if [ ! -d $SRC_IMG_DIR ]; then
         mkdir $SRC_IMG_DIR
         echo "Saving images from GCS to $SRC_IMG_DIR..."
         gsutil -m cp "gs://$SRC_IMG_BUCKET/*" $SRC_IMG_DIR
-        cat $SRC_IMG_DIR/image_data.txt | cut -d "|" -f 1 > $SRC_IMG_FILE
-        python -c "open(\"$SRC_IMG_FILE\" + \"-tmp\", \"w\").writelines(\"$SRC_IMG_DIR/\" + l for l in open(\"$SRC_IMG_FILE\").readlines())"
-        rm -f $SRC_IMG_FILE
-        mv $SRC_IMG_FILE-tmp $SRC_IMG_FILE
+        find $SRC_IMG_DIR -maxdepth 1 | grep $IMG_EXT > $SRC_IMG_FILE
     else
         echo "Directory: $SRC_IMG_DIR not found."
         echo "Run with the optional download parameter to download images"
