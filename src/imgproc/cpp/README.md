@@ -1,6 +1,6 @@
 **Under development image processing code**
 
-*Requires OpenCV 3*
+*Requires OpenCV 3 and [GFlags](https://github.com/gflags/gflags)*
 
 **Parameters:** 
 - images_file: text file of image filenames with no path prefix, one per line 

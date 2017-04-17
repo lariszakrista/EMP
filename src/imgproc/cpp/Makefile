@@ -1,5 +1,5 @@
 
-LIBS = -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui
+LIBS = -lgflags_nothreads -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui
 
 all: pipeline
 

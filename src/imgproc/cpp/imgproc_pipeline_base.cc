@@ -4,7 +4,10 @@
 #include <fstream>
 #include <libgen.h>
 
+#include <gflags/gflags.h>
+
 #include "imgproc_pipeline_base.h"
+
 
 using namespace cv;
 using std::string;
@@ -15,46 +18,108 @@ using std::endl;
 using std::cerr;
 using std::vector;
 
+
+/* ----- Command Line Flag Validators ----- */
+
+static bool validate_mode_str(const char *flagname, const string &value)
+{
+    if (value == "window" || value == "batch")
+    {     
+        return true;
+    }   
+
+    cerr << "Invalid value for " << flagname << ": " << value << endl;
+    cerr << "Valid values are \"batch\" and \"window\"" << endl;
+
+    return false;
+}
+
+static bool validate_image_file(const char *flagname, const string &value)
+{   
+    if (value != "")
+    {     
+        return true;
+    }
+    
+    cerr << flagname << " is required" << endl;
+    
+    return false;
+}
+
+/* ----- End Command Line Flag Validators ----- */
+
+
+/* ----- Command Line Flag Definitions ----- */
+
+DEFINE_string(
+    mode, "window",
+    "Optional. Mode in which to run the image processor pipeline. Valid modes: \"window\", \"batch\"."
+);
+DEFINE_validator(mode, &validate_mode_str);
+
+DEFINE_string(
+    output_dir, "",
+    "Required in batch mode. Directory in which to save exported images and metadata when run in batch mode."
+);
+
+DEFINE_string(
+    images_file, "",
+    "Required. Path to file containing list of images to process. One line per image. Image files *must* be given as full paths."
+);
+DEFINE_validator(images_file, &validate_image_file);
+
+DEFINE_double(
+    hough_dp, 2.0,
+    "Optional. dp parameter to cv::HoughCircles. From OpenCV documentation: Inverse ratio of the accumulator resolution to the "
+    "image resolution. For example, if dp=1 , the accumulator has the same resolution as the input image. If dp=2 , the "
+    "accumulator has half as big width and height."
+);
+
+DEFINE_double(
+    hough_param1, 30.0,
+    "Optional. param1 parameter to cv::HoughCircles. From OpenCV documentation: First method-specific parameter. In case of "
+    "CV_HOUGH_GRADIENT , it is the higher threshold of the two passed to the Canny() edge detector (the lower one is twice smaller)."
+);
+
+DEFINE_double(
+    hough_param2, 15.0,
+    "Optional. param2 parameter to cv::HoughCircles. From OpenCV documentation: Second method-specific parameter. In case of CV_HOUGH_GRADIENT"
+    ", it is the accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected."
+    " Circles, corresponding to the larger accumulator values, will be returned first."
+);
+
+DEFINE_double(
+    hough_min_dist, -1,
+    "Optional. If not provided, image_height / 8 will be used. min_dist parameter to cv::HoughCircles. From OpenCV documentation: "
+    "Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be "
+    "falsely detected in addition to a true one. If it is too large, some circles may be missed."
+);
+
+/* ----- End Command Line Flag Definitions ----- */
+
+
 ImgProcPipelineBase::ImgProcPipelineBase(int argc, char **argv)
 {
     ifstream f;
     ofstream metadata_file;
     string valid_modes, input_file, dest_dir, mode_str, output_dir;
 
-    valid_modes = "window, batch";
-
-    if (argc < 3) 
+    gflags::SetUsageMessage("Image processing pipeline for Eclipse Megamovie Project");
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+ 
+    if (FLAGS_mode == "batch" && FLAGS_output_dir == "")
     {
-        cerr << "Usage:\n\t$ " << argv[0] << " images_file mode [output_dir]" << endl;
-        cerr << endl << "Params:\n";
-        cerr << "\toutput_dir required when run in batch mode\n";
-        cerr << "\tmodes: " << valid_modes << "\n" << endl;
-        exit(1);
-    } 
-
-    input_file = argv[1];
-    mode_str   = argv[2];
-    
-    if (mode_str == "batch")
-    {
-        if (argc < 4)
-        {
-            cerr << "output_dir parameter is required for batch mode" << endl;
-            exit(1);
-        }
-        this->mode       = BATCH;
-        this->output_dir = argv[3];
-    }
-    else if (mode_str == "window")
-    {
-        this->mode = WINDOW;
-        this->output_dir = "";
-    }
-    else
-    {
-        cerr << "Invalid mode: " << mode_str << ". Valid modes: " << valid_modes << endl;
+        cerr << "output_dir parameter is required in batch mode" << endl;
         exit(1);
     }
+
+    // Mode has already been validated by gflags
+    this->mode           = FLAGS_mode == "window" ? WINDOW : BATCH;
+    this->output_dir     = FLAGS_output_dir;
+    this->hough_dp       = FLAGS_hough_dp;
+    this->hough_param1   = FLAGS_hough_param1;
+    this->hough_param2   = FLAGS_hough_param2;
+    this->hough_min_dist = FLAGS_hough_min_dist;
 
     if (this->mode == BATCH)
     {
@@ -70,7 +135,7 @@ ImgProcPipelineBase::ImgProcPipelineBase(int argc, char **argv)
     }    
 
     // open the image file
-    this->image_file.open(input_file.c_str(), std::ifstream::in);    
+    this->image_file.open(FLAGS_images_file.c_str(), std::ifstream::in);    
 
     if (!this->image_file.is_open())
     {
@@ -157,11 +222,12 @@ vector<Vec3f> ImgProcPipelineBase::find_circles(const Mat &image)
     Mat canny;
     vector<Vec3f> circles;
 
-    double c1 = 30, c2 = 15;
+    // Default hough_min_dist flag value is -1
+    double min_dist = this->hough_min_dist == -1 ? image.rows / 8 : this->hough_min_dist;
 
     time_t t = std::clock();
-    HoughCircles(image, circles, CV_HOUGH_GRADIENT, 2,
-                 image.rows / 8, c1, c2, 0, 0);
+    HoughCircles(image, circles, CV_HOUGH_GRADIENT, this->hough_dp,
+                 min_dist, this->hough_param1, this->hough_param2, 0, 0);
     t = std::clock() - t;
 
     // Add performance time for computing circles to image object
@@ -176,10 +242,13 @@ vector<Vec3f> ImgProcPipelineBase::find_circles(const Mat &image)
         this->current_image.add_observation("No sun found");
     }
     
-    // Create a canny image of the image and it add it as an intermediate image
-    Canny(image, canny, MAX(c1 / 2, 1), c1, 3, false);
-    this->current_image.add_intermediate_image("Canny edges", canny);
-    
+    if (this->mode == WINDOW)
+    {
+        // Create a canny image of the image and it add it as an intermediate image
+        Canny(image, canny, MAX(this->hough_param1 / 2, 1), this->hough_param1, 3, false);
+        this->current_image.add_intermediate_image("Canny edges", canny);
+    }
+
     return circles;
 }
 
@@ -306,4 +375,3 @@ bool ImgProcPipelineBase::get_next_image()
     
        return true;            
 }
-
