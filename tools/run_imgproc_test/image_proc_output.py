@@ -475,7 +475,7 @@ def main():
     html_path = build_html_doc(original_dir, processed_dir, original_bucket, processed_bucket, converter)
     html_path = converter.get_run_specific_filename(html_path)
 
-    #converter.commit(processed_dir)
+    converter.commit(processed_dir)
 
     print('WEB_URL:{}'.format(util.gcs_url(html_path, processed_bucket)))
 
