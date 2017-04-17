@@ -41,6 +41,13 @@ HTML = """
 			max-width: 300px;
 			max-height: 300px;
 		}
+        .mdl-layout {
+            width: auto;
+            overflow-x: scroll;
+        }
+        .mdl-layout__content {
+            overflow-x: scroll;
+        }
 	</style>
 
 <script>
