@@ -30,12 +30,6 @@ To build/run:
 $ # Build
 $ make
 $
-$ # Run
-$ ./imgproc
-Example usage:
-    $ ./pipeline --images_file=/path/to.file --mode=$MODE --output_dir=/path/to/dir --hough_dp=2.0
-
-Params:
-    output_dir required when run in batch mode
-    modes: window, batch
+$ # Example usage
+$ ./pipeline --images_file=/path/to.file --mode=$MODE --output_dir=/path/to/dir --hough_dp=2.0
 ```
