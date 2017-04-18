@@ -470,8 +470,8 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
 
         metadata_items.append(item)
     
-    time_score /= time_count
-    pos_score = pos_sum / pos_count
+    time_score = time_score / time_count if time_count != 0 else None
+    pos_score = pos_sum / pos_count if pos_count != 0 else None
 
     return metadata_items, time_score, pos_score
 
