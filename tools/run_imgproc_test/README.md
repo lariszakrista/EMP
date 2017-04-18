@@ -1,5 +1,5 @@
 This tool will run the image processor and summarize the results in an HTML file. This script 
-will take care of downloading the images from Google Cloud Storage (if the `download` flag is set, 
+will take care of downloading the images from Google Cloud Storage (if the `download` flag is set), 
 and building the image processor. This tool assumes access to the `northamericaneclipseimages` 
 Google Cloud Project.
 
