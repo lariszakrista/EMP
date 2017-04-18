@@ -436,32 +436,36 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
         else:
             item['found_sun'] = "undefined"
             
-        if truth_file is not None:
-        
-            try:
-                if truth_positions[img_name]['moon'] is not None:
-                    moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2][1:]), truth_positions[img_name]['moon'])
-                    item['moon_center_diff'] = moon_center_offset
-                    item['moon_rad_diff'] = moon_radius_diff
-                else:
-                    item['moon_center_diff'] = "No Moon in ground truth"
-                    item['moon_rad_diff'] = "No Moon in ground truth"
+        if truth_file is not None and img_name in truth_positions:
+ 
+            if truth_positions[img_name]['moon'] is not None:
+                moon_center_offset, moon_radius_diff = calc_position_diff(literal_eval(tokens[2][1:]), truth_positions[img_name]['moon'])
+                item['moon_center_diff'] = moon_center_offset
+                item['moon_rad_diff'] = moon_radius_diff
+            else:
+                item['moon_center_diff'] = "No Moon in ground truth"
+                item['moon_rad_diff'] = "No Moon in ground truth"
 
+            if truth_positions[img_name]['sun'] is not None:
                 sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1][1:]), truth_positions[img_name]['sun'])
-
                 item['sun_center_diff'] = sun_center_offset
                 item['sun_rad_diff'] = sun_radius_diff
+            else:
+                item['sun_center_diff'] = "No Sun in ground truth"
+                item['sun_rad_diff'] = "No Sun in ground truth"
+
+            # sun_center_offset, sun_radius_diff = calc_position_diff(literal_eval(tokens[1][1:]), truth_positions[img_name]['sun'])
+
+            # item['sun_center_diff'] = sun_center_offset
+            # item['sun_rad_diff'] = sun_radius_diff
                 
-                if tokens[1] is not None and truth_positions[img_name]['sun'] is not None:
-                    pos_sum += (sun_center_offset + sun_radius_diff)
-                    pos_count += 1
-                if tokens[2] is not None and truth_positions[img_name]['moon'] is not None:
-                    pos_sum += (moon_center_offset + moon_radius_diff)
-                    pos_count += 1
+            if tokens[1] is not None and truth_positions[img_name]['sun'] is not None:
+                pos_sum += (sun_center_offset + sun_radius_diff)
+                pos_count += 1
+            if tokens[2] is not None and truth_positions[img_name]['moon'] is not None:
+                pos_sum += (moon_center_offset + moon_radius_diff)
+                pos_count += 1
                 
-            except KeyError:
-                pass
-            
         else:
             item['moon_center_diff'] = "No ground truth"
             item['moon_rad_diff'] = "No ground truth"
