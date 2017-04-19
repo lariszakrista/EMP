@@ -8,7 +8,7 @@ if [ $# -lt 2 ]; then
 fi
 
 if [ $# -gt 2 ]; then
-    if [ $# = 3 ] && [ $3 != download ]; then
+    if [ $# = 3 ] && [ "$3" != download ]; then
         PIPELINE_FLAGS=$3
     else
         PIPELINE_FLAGS=$4

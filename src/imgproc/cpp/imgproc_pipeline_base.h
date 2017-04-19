@@ -35,6 +35,12 @@ protected:
     // cv::HoughCircles min_dist parameter
     double hough_min_dist;
 
+    // cv::HoughCircles min_radius parameter
+    int hough_min_radius;
+
+    // cv::HoughCircles max_radius parameter
+    int hough_max_radius;
+
 public:
     // Will open up the initialize image_file ifstream object given input_file string
     ImgProcPipelineBase(int, char **);        

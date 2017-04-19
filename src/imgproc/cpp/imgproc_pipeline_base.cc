@@ -21,7 +21,7 @@ using std::vector;
 
 /* ----- Command Line Flag Validators ----- */
 
-static bool validate_mode_str(const char *flagname, const string &value)
+static bool validate_mode(const char *flagname, const string &value)
 {
     if (value == "window" || value == "batch")
     {     
@@ -34,7 +34,7 @@ static bool validate_mode_str(const char *flagname, const string &value)
     return false;
 }
 
-static bool validate_image_file(const char *flagname, const string &value)
+static bool validate_images_file(const char *flagname, const string &value)
 {   
     if (value != "")
     {     
@@ -46,6 +46,19 @@ static bool validate_image_file(const char *flagname, const string &value)
     return false;
 }
 
+static bool validate_radius(const char *flagname, google::int32 value)
+{
+    if (value >= 0)
+    {
+        return true;
+    }
+
+    cerr << flagname << " must be >= 0" << endl;
+
+    return false;
+}
+
+
 /* ----- End Command Line Flag Validators ----- */
 
 
@@ -55,7 +68,7 @@ DEFINE_string(
     mode, "window",
     "Optional. Mode in which to run the image processor pipeline. Valid modes: \"window\", \"batch\"."
 );
-DEFINE_validator(mode, &validate_mode_str);
+DEFINE_validator(mode, &validate_mode);
 
 DEFINE_string(
     output_dir, "",
@@ -66,7 +79,7 @@ DEFINE_string(
     images_file, "",
     "Required. Path to file containing list of images to process. One line per image. Image files *must* be given as full paths."
 );
-DEFINE_validator(images_file, &validate_image_file);
+DEFINE_validator(images_file, &validate_images_file);
 
 DEFINE_double(
     hough_dp, 2.0,
@@ -95,6 +108,21 @@ DEFINE_double(
     "falsely detected in addition to a true one. If it is too large, some circles may be missed."
 );
 
+DEFINE_int32(
+    hough_min_radius, 0,
+    "Optional. min_radius parameter to cv::HoughCircles. From OpenCV documentation: "
+    "Minimum circle radius."
+);
+DEFINE_validator(hough_min_radius, &validate_radius);
+
+DEFINE_int32(
+    hough_max_radius, 0,
+    "Optional. max_radius parameter to cv::HoughCircles. From OpenCV documentation: "
+    "Maximum circle radius."
+);
+DEFINE_validator(hough_max_radius, &validate_radius);
+
+
 /* ----- End Command Line Flag Definitions ----- */
 
 
@@ -114,12 +142,14 @@ ImgProcPipelineBase::ImgProcPipelineBase(int argc, char **argv)
     }
 
     // Mode has already been validated by gflags
-    this->mode           = FLAGS_mode == "window" ? WINDOW : BATCH;
-    this->output_dir     = FLAGS_output_dir;
-    this->hough_dp       = FLAGS_hough_dp;
-    this->hough_param1   = FLAGS_hough_param1;
-    this->hough_param2   = FLAGS_hough_param2;
-    this->hough_min_dist = FLAGS_hough_min_dist;
+    this->mode             = FLAGS_mode == "window" ? WINDOW : BATCH;
+    this->output_dir       = FLAGS_output_dir;
+    this->hough_dp         = FLAGS_hough_dp;
+    this->hough_param1     = FLAGS_hough_param1;
+    this->hough_param2     = FLAGS_hough_param2;
+    this->hough_min_dist   = FLAGS_hough_min_dist;
+    this->hough_min_radius = (int) FLAGS_hough_min_radius;
+    this->hough_max_radius = (int) FLAGS_hough_max_radius;
 
     if (this->mode == BATCH)
     {
@@ -227,7 +257,7 @@ vector<Vec3f> ImgProcPipelineBase::find_circles(const Mat &image)
 
     time_t t = std::clock();
     HoughCircles(image, circles, CV_HOUGH_GRADIENT, this->hough_dp,
-                 min_dist, this->hough_param1, this->hough_param2, 0, 0);
+                 min_dist, this->hough_param1, this->hough_param2, this->hough_min_radius, this->hough_max_radius);
     t = std::clock() - t;
 
     // Add performance time for computing circles to image object
