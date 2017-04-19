@@ -434,7 +434,7 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
         if tokens[2].startswith('c'):
             item['found_moon'] = literal_eval(tokens[2][1:])
         else:
-            item['found_sun'] = "undefined"
+            item['found_moon'] = "undefined"
             
         if truth_file is not None and img_name in truth_positions:
  
