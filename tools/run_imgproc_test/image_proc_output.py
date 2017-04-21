@@ -53,9 +53,10 @@ HTML = """
 <script>
 
     var COLUMN_CHOICES = {
-        SUN : 2,
-        MOON : 3,
-        TIMES : 4
+        ORIGINAL_IMG: 0,
+        SUN:          2,
+        MOON:         3,
+        TIMES:        4,
     };
 
     var prev_col_name = " ";
@@ -72,6 +73,9 @@ HTML = """
 
     function hide_all_arrows() {
 
+        document.getElementById("original_img_up").style.display = "none";
+        document.getElementById("original_img_down").style.display = "none";
+
         document.getElementById("sun_diff_up").style.display = "none";
         document.getElementById("sun_diff_down").style.display = "none";
 
@@ -80,7 +84,6 @@ HTML = """
 
         document.getElementById("times_up").style.display = "none";
         document.getElementById("times_down").style.display = "none";
-
     }
 
     function sun_diff_comparator(row1, row2) {
@@ -171,6 +174,24 @@ HTML = """
         return 0;
     }
 
+    function original_img_comparator(row1, row2) {
+        var col_val = 0;
+
+        var row1_cell = row1.getElementsByTagName("td")[col_val];
+        var row2_cell = row2.getElementsByTagName("td")[col_val];
+
+        var row1_val  = row1.getElementsByTagName("img")[0].getAttribute("src");
+        var row2_val  = row2.getElementsByTagName("img")[0].getAttribute("src");
+
+        if (row1_val < row2_val) {
+            return -1;
+        }
+        if (row1_val > row2_val) {
+            return 1;
+        }
+        return 0;
+    }
+
     function sort_table(n) {
 
         var table = document.getElementById("eclipse_data_table");
@@ -181,6 +202,10 @@ HTML = """
         var start = performance.now();
 
         switch(n) {
+            case COLUMN_CHOICES.ORIGINAL_IMG:
+                var col_name = "original_img";
+                row_array.sort(original_img_comparator);
+                break;
             case COLUMN_CHOICES.SUN:
                 var col_name = "sun_diff";
                 row_array.sort(sun_diff_comparator);
@@ -258,13 +283,14 @@ HTML = """
                 <table id="eclipse_data_table" class="mdl-data-table mdl-js-data-table">
                     <thead>
                         <tr>
-	                        <th class="mdl-data-table__cell--non-numeric">
+	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(COLUMN_CHOICES.ORIGINAL_IMG)" style="cursor: pointer;">
 		                        Original
+                                <i id="original_img_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
+                                <i id="original_img_up" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_up</i>
 	                        </th>
 	                        <th class="mdl-data-table__cell--non-numeric">
 		                        Processed
 	                        </th>
-
 	                        <th class="mdl-data-table__cell--non-numeric" onclick="sort_table(COLUMN_CHOICES.SUN)" style="cursor: pointer;">
 		                        Sun Results
                                 <i id="sun_diff_down" style="position: absolute; display: none;" class="material-icons">keyboard_arrow_down</i>
