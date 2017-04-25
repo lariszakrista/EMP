@@ -1,26 +1,39 @@
+#!/bin/bash
+
 set "-e"
 
-if [ $# = 0 ]; then
-    echo "Usage: test image_dir [download]"
+if [ $# -lt 2 ]; then
+    echo 'Usage: ./test $WORKING_DIR $SRC_GCS_BUCKET [download] [$PIPELINE_FLAGS]'
     exit
 fi
 
+if [ $# -gt 2 ]; then
+    if [ $# = 3 ] && [ "$3" != download ]; then
+        PIPELINE_FLAGS=$3
+    else
+        PIPELINE_FLAGS=$4
+    fi
+fi
+
+IMG_EXT="\.jpg\|\.JPG\|\.jpeg\|\.JPEG\|\.png\|\.PNG"
+
+SRC_IMG_BUCKET=$2
+PROCESSED_BUCKET=eclipse_imgproc_output
+
 BASE_DIR=$(cd $1 && pwd)
-SRC_IMG_BUCKET=eclipse_image_ground_truth_dataset_renamed
 SRC_IMG_DIR=$BASE_DIR/$SRC_IMG_BUCKET
 SRC_IMG_FILE=$SRC_IMG_DIR/images.txt
 OUTPUT_DIR=$BASE_DIR/output
 
+TMP_FILE=$BASE_DIR/__tmp_python_output
+
 if [ ! -d $SRC_IMG_DIR ]; then
     
-    if [ $2 = download ]; then
+    if [ $3 = download ]; then
         mkdir $SRC_IMG_DIR
         echo "Saving images from GCS to $SRC_IMG_DIR..."
         gsutil -m cp "gs://$SRC_IMG_BUCKET/*" $SRC_IMG_DIR
-        cat $SRC_IMG_DIR/image_data.txt | cut -d "|" -f 1 > $SRC_IMG_FILE
-        python -c "open(\"$SRC_IMG_FILE\" + \"-tmp\", \"w\").writelines(\"$SRC_IMG_DIR/\" + l for l in open(\"$SRC_IMG_FILE\").readlines())"
-        rm -f $SRC_IMG_FILE
-        mv $SRC_IMG_FILE-tmp $SRC_IMG_FILE
+        find $SRC_IMG_DIR -maxdepth 1 | grep $IMG_EXT > $SRC_IMG_FILE
     else
         echo "Directory: $SRC_IMG_DIR not found."
         echo "Run with the optional download parameter to download images"
@@ -33,9 +46,15 @@ mkdir $OUTPUT_DIR
 pushd ../../src/imgproc/cpp
 make clean
 make
-./pipeline $SRC_IMG_FILE batch $OUTPUT_DIR
+./pipeline --images_file=$SRC_IMG_FILE --mode=batch --output_dir=$OUTPUT_DIR $PIPELINE_FLAGS
 popd
 
-python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR
-google-chrome $OUTPUT_DIR/output.html
- 
+# Create html output, rename image files
+python3 image_proc_output.py $SRC_IMG_DIR $OUTPUT_DIR $SRC_IMG_BUCKET $PROCESSED_BUCKET $PIPELINE_FLAGS > $TMP_FILE
+
+# Upload processed image files, html file to GCS
+gsutil -m cp $OUTPUT_DIR/* gs://$PROCESSED_BUCKET
+
+# Output Web URL
+cat $TMP_FILE
+rm -f $TMP_FILE

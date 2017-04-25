@@ -23,6 +23,24 @@ private:
 protected:
     ImgProcImage current_image;
 
+    // cv::HoughCircles dp parameter
+    double hough_dp;
+
+    // cv::HoughCircles param1 parameter
+    double hough_param1;
+
+    // cv::HoughCircles param2 parameter
+    double hough_param2;
+
+    // cv::HoughCircles min_dist parameter
+    double hough_min_dist;
+
+    // cv::HoughCircles min_radius parameter
+    int hough_min_radius;
+
+    // cv::HoughCircles max_radius parameter
+    int hough_max_radius;
+
 public:
     // Will open up the initialize image_file ifstream object given input_file string
     ImgProcPipelineBase(int, char **);        
