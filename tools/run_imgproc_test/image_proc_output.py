@@ -275,7 +275,8 @@ HTML = """
 			            <li>Pipeline Arguments: {{ pipeline_flags }}</li>
 			            <li>GCS Source Bucket: {{ gcs_src }}</li>
 			            <li>Time Score: {{ time_score }}</li>
-			            <li>Position Score: {{ pos_score }}</li>
+			            <li>Mean Sun Center Offset: {{ sun_center_score }}</li>
+			            <li>Mean Absolute Sun Radius Difference: {{ sun_radius_score }}</li>
 			        </ul> 
 
                 <h3>Output Table</h3>
@@ -415,8 +416,9 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
     metadata_items = []
     time_score = 0
     time_count = 0
-    pos_sum = 0
-    pos_count = 0
+    sun_center_sum = 0
+    sun_radius_sum = 0
+    sun_count = 0
 
     for line in f.readlines():
         tokens = line.split('|')
@@ -489,11 +491,9 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
                 item['sun_rad_diff'] = "No Sun in ground truth"
 
             if tokens[1].startswith('c') and truth_positions[img_name]['sun'] is not None:
-                pos_sum += (sun_center_offset + sun_radius_diff)
-                pos_count += 1
-            if tokens[2].startswith('c') and truth_positions[img_name]['moon'] is not None:
-                pos_sum += (moon_center_offset + moon_radius_diff)
-                pos_count += 1
+                sun_center_sum += sun_center_offset
+                sun_radius_sum += abs(sun_radius_diff)
+                sun_count += 1
                 
         else:
             item['moon_center_diff'] = "No ground truth"
@@ -505,9 +505,10 @@ def read_metadata(original_path, processed_path, original_bucket, processed_buck
         metadata_items.append(item)
     
     time_score = time_score / time_count if time_count != 0 else None
-    pos_score = pos_sum / pos_count if pos_count != 0 else None
+    sun_center_score = sun_center_sum / sun_count if sun_count != 0 else None
+    sun_radius_score = sun_radius_sum / sun_count if sun_count != 0 else None
 
-    return metadata_items, time_score, pos_score
+    return metadata_items, time_score, sun_center_score, sun_radius_score
 
     
 def build_html_doc(original_path, processed_path, original_bucket, processed_bucket, converter, pipeline_flags):
@@ -517,7 +518,7 @@ def build_html_doc(original_path, processed_path, original_bucket, processed_buc
 
     page_title = "Eclipse Image Processor Output"
 
-    metadata, time_score, pos_score = read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter)
+    metadata, time_score, sun_center_score, sun_radius_score = read_metadata(original_path, processed_path, original_bucket, processed_bucket, converter)
 
     document = Environment().from_string(HTML)
 
@@ -525,7 +526,7 @@ def build_html_doc(original_path, processed_path, original_bucket, processed_buc
     f = open(html_path, 'w')
     f.write(document.render(title=page_title, gitrev=converter.git_hash, 
                             date=date_time, pipeline_flags=pipeline_flags, gcs_src=original_bucket, 
-                            time_score=time_score, pos_score=pos_score, items=metadata))
+                            time_score=time_score, sun_center_score=sun_center_score, sun_radius_score=sun_radius_score, items=metadata))
     
     return html_path
 
