@@ -143,3 +143,9 @@ void ImgProcImage::add_execution_time(const std::string &name, double num_secs)
 {
     this->execution_times[name] = num_secs;
 }
+
+const Mat& ImgProcImage::get_original() const
+{
+    return this->original;
+}
+

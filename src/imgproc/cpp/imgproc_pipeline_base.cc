@@ -190,13 +190,13 @@ void ImgProcPipelineBase::preprocess(const Mat &image, Mat &processed)
     {    
         processed = image.clone();
     }
-    // When we add intermediate images (for debug purposes) we must add deep copies
-    // so that they are not modified before being shown
-    this->current_image.add_intermediate_image("gray", processed);
 
     // Resize image to normalized size
     dimensions = getRescaledDimensions(processed, HD_MAX_W, HD_MAX_H);
     resize(processed, processed, Size(dimensions.first, dimensions.second));
+
+    // Record BW/resized image
+    this->current_image.add_intermediate_image("gray", processed);
 
     // Apply an unsharp mask to increase local contrast
     GaussianBlur(processed, blurred, Size(15, 15), 20, 20);
@@ -220,8 +220,10 @@ std::pair<int, int> ImgProcPipelineBase::getRescaledDimensions(const Mat &image,
 
     given_ratio         = (double) max_w / (double) max_h;
     ratio               = (double) image.cols / (double) image.rows;
+
     // width
     dimensions.first    = ratio > given_ratio ? max_w : cvRound(ratio * (double) max_h);
+
     // height
     dimensions.second   = ratio > given_ratio ? cvRound((double) max_w / ratio) : max_h;
 
@@ -263,9 +265,13 @@ vector<Vec3f> ImgProcPipelineBase::find_circles(const Mat &image)
     // Add performance time for computing circles to image object
     this->current_image.add_execution_time("circles", (double) t / (double) CLOCKS_PER_SEC);
     
-    // Add circles to image object
-    this->current_image.add_circles(circles);    
-    
+    // Add circles to image object -- rescale so that the circles match the original image size
+    for (int i = 0; i < circles.size(); i++)
+    {
+        Vec3f rescaled = this->rescaleCircle(circles[i], this->current_image.get_original());
+        this->current_image.add_circle(rescaled);
+    }
+
     // If no circles are found, record the observation
     if (circles.size() == 0) 
     {
@@ -403,5 +409,5 @@ bool ImgProcPipelineBase::get_next_image()
     // Initialize current_image object
     this->current_image = ImgProcImage(src, this->mode, &this->metadata_file, filename);
     
-       return true;            
+    return true;
 }
