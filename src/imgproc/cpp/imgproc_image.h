@@ -47,6 +47,8 @@ public:
 
     void add_execution_time(const std::string &name, double num_secs);
 
+    const cv::Mat& get_original() const;
+
 private:
     // Imgproc pipeline execution mode determines whether intermediate images 
     // are saved or not and the behavior of record
