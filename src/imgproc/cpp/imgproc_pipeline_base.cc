@@ -383,8 +383,10 @@ bool ImgProcPipelineBase::get_next_image()
         strcpy(c_filename, filename.c_str());
         
         cout << "Opening image: " << filename << endl;
-        // Read image 
-        src = imread(filename, CV_LOAD_IMAGE_UNCHANGED);
+
+        // Read image in color - this will remove the
+        // alpha channel from pngs
+        src = imread(filename, CV_LOAD_IMAGE_COLOR);
         
         // Only break out when a good image is found
         if (src.data)
