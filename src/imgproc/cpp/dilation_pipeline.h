@@ -40,7 +40,6 @@ public:
         Mat kernel = getStructuringElement(MORPH_RECT, Size(5, 1));
 
         // Erosion
-        // Mat k2 = getStructuringElement(MORPH_RECT, Size(50, 1));
         erode(processed, processed, kernel);
         this->current_image.add_intermediate_image("erode", processed); 
 
@@ -55,5 +54,5 @@ public:
 
         // add execution time
         this->current_image.add_execution_time("preprocess", (double) t / (double) CLOCKS_PER_SEC);
-        }
+    }
 };
