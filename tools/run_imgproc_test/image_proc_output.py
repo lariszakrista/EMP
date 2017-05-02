@@ -96,10 +96,18 @@ HTML = """
         var row2_result = row2_cell.innerHTML.split("<br>");
 
         var row1_val = row1_result[4];
-        row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[7]));
+        if (row1_val.toLowerCase().includes("ground truth")) {
+            row1_val = 10000;
+        } else {
+            row1_val = parseFloat(row1_val) + Math.abs(parseFloat(row1_result[7]));
+        }
 
         var row2_val = row2_result[4];
-        row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[7]));
+        if (row2_val.toLowerCase().includes("ground truth")) {
+            row2_val = 10000;
+        } else {
+            row2_val = parseFloat(row2_val) + Math.abs(parseFloat(row2_result[7]));
+        }
 
         if (row1_val < row2_val) {
             return -1;
