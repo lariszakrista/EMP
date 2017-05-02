@@ -3,7 +3,7 @@ LIBS = -lgflags_nothreads -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lop
 
 all: pipeline
 
-pipeline: driver.cc imgproc_pipeline_base.o imgproc_image.o
+pipeline: driver.cc dilation_pipeline.h imgproc_pipeline_base.o imgproc_image.o
 	g++ driver.cc imgproc_pipeline_base.o imgproc_image.o -o pipeline $(LIBS)
 
 imgproc_pipeline_base.o: imgproc_pipeline_base.cc
