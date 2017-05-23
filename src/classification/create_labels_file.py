@@ -5,11 +5,11 @@ from the output of /tools/label_images.
 
 import json
 
-from image_data import ImageData
+from image_data import ImageDataBase
 
 
 def main():
-    data = json.loads(open(ImageData.LABELED_DATA_FILE).read())
+    data = json.loads(open(ImageDataBase.LABELED_DATA_FILE).read())
     labels = dict()
 
     i = 0
@@ -19,7 +19,7 @@ def main():
                 labels[l[0]] = i
                 i += 1
 
-    open(ImageData.LABELS_FILE, 'w').write(json.dumps(labels))
+    open(ImageDataBase.LABELS_FILE, 'w').write(json.dumps(labels))
 
 
 if __name__ == '__main__':
