@@ -50,19 +50,29 @@ particular label.
 This model is trained/tested on 10 k-fold cross validation sets. For each fold, a new model
 is instanciated and trained on the given training set for 10 epochs. The weights and
 biases for this model are then saved along with its performance metrics on the given test set. 
-After running through all folds, the model reports "Overall Performance," an average of the 
-test metrics reported from each of the k test sets. Additionally, the 10 most significant 
-weights are reported. These are computed by averaging the weights from the k trained models 
-and comparing them by sum of absolute values (as each weight is actually a vector of two numbers).
+After running through all folds, the model reports "Average k-fold test case performance," an 
+average of the test metrics reported from each of the k test sets. 
+
+After running through the k training/testing iterations, we average the weights and biases
+from each of these iterations. These averaged weights are used to report the 10 most significant 
+weights. These are obtained by comparing the weights by sum of absolute values (as each weight is 
+actually a vector of two numbers). Finally, we instantiate a new model and set its weights/biases
+to these averaged values. We then test this model on all the images we have. These results are
+reported as "Results for averaged model on all images."
 
 **Latest Metrics:**
 
-Overall performance:
+Average k-fold test case performance:
 - Accuracy: 0.818659
 - False positive ratio: 0.104582
 - Acceptance ratio: 1.0
 
-10 Most Significant Weights (these generally vary a bit run to run, but the top 3 or 4 are pretty consistant):
+Results for averaged model on all images:
+- Accuracy: 0.8322010869565217
+- False positive ratio: 0.09782608695652174
+- Acceptance ratio: 1.0
+
+10 most significant weights (these generally vary a bit run to run, but the top 3 or 4 are pretty consistant):
 - corona [ 0.27336371 -0.24147423]
 - crescent [-0.2130824   0.27699929]
 - eye [ 0.23350556 -0.17512074]

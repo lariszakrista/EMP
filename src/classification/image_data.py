@@ -95,6 +95,9 @@ class ImageDataKFold(ImageDataBase):
         # (n_samples, )
         self.folds = skf.split(self.xs, [item[0] for item in self.ys])
 
+    def get_all(self):
+        return self.xs, self.ys
+
     def get_folds(self):
         """
         Generator returning k folds
