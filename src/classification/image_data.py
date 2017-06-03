@@ -1,24 +1,25 @@
 import json
+import os
 from random import shuffle
 
+import cv2
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
 
 class ImageDataBase(object):
 
-    LABELS_FILE = 'labels.json'
+    TOTALITY_CLS_NAME = 'TOTALITY'
+    NON_TOTALITY_CLS_NAME = 'NON_TOTALITY'
 
-    LABELED_DATA_FILE = 'labeled_data.json'
-
-    def __init__(self, one_hot=True):
+    def __init__(self, one_hot=True, labels_file='labels.json', labeled_data_file='labeled_data.json'):
         self.one_hot = one_hot
 
         # Labels and their corresponding indices
-        self.labels = json.loads(open(self.LABELS_FILE).read())
+        self.labels = json.loads(open(labels_file).read())
 
         # Load data and record number of training examples
-        self.data = json.loads(open(self.LABELED_DATA_FILE).read())
+        self.data = json.loads(open(labeled_data_file).read())
 
     def get_feature_name(self, idx):
         for k, v in self.labels.items():
@@ -31,37 +32,60 @@ class ImageDataBase(object):
         ys = []
 
         for k in set_keys:
-            feature_vec, y_val = self._get_feature_vector_and_label(k)
-            xs.append(feature_vec)
-            ys.append(y_val)
+            try:
+                x, y = self._get_xy(k)
+                xs.append(x)
+                ys.append(y)
+            except Exception as e:
+                print('Error obtaining x or y value. Skipping. Error: {}'.format(e))
+                pass
 
         return np.array(xs), np.array(ys)
 
-    def get_dim(self):
-        in_dim = len(self.labels)
-        out_dim = 2 if self.one_hot else 1
-        return in_dim, out_dim
+    @classmethod
+    def get_class_name(cls, y):
+        try:
+            totality = y[0] == 1
+        except IndexError:
+            totality = y
+        return cls.TOTALITY_CLS_NAME if totality else cls.NON_TOTALITY_CLS_NAME
 
-    def _get_feature_vector_and_label(self, key):
+    def get_dim(self):
+        return self._get_in_dim(), self._get_out_dim()
+
+    def _get_in_dim(self):
+        return len(self.labels)
+
+    def _get_out_dim(self):
+        if self.one_hot:
+            return 2
+        else:
+            return 1
+
+    def _get_xy(self, key):
+        return self._get_x(key), self._get_y(key)
+
+    def _get_x(self, key):
         feature_vec = np.zeros(len(self.labels))
 
         for l in self.data[key]['labels']:
             feature_idx = self.labels[l[0]]
             feature_vec[feature_idx] = l[1]
 
-        totality = (self.data[key]['classification'] == 'TOTALITY')
+        return feature_vec
+
+    def _get_y(self, key):
+        totality = (self.data[key]['classification'] == self.TOTALITY_CLS_NAME)
         if self.one_hot:
-            y_val = [int(v) for v in (totality, not totality)]
+            y = [int(v) for v in (totality, not totality)]
         else:
-            y_val = int(totality)
-
-        return feature_vec, y_val
-
+            y = int(totality)
+        return y
 
 class ImageDataSimpleSplit(ImageDataBase):
 
-    def __init__(self, one_hot=True, train_ratio=0.7):
-        super().__init__(one_hot)
+    def __init__(self, train_ratio=0.7, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         num_train = int(len(self.data) * train_ratio)
 
@@ -82,8 +106,8 @@ class ImageDataSimpleSplit(ImageDataBase):
 
 class ImageDataKFold(ImageDataBase):
 
-    def __init__(self, nfolds, one_hot=True):
-        super().__init__(one_hot)
+    def __init__(self, nfolds, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # Convert entire dataset into feature vectors and 
         # y labels
@@ -115,5 +139,57 @@ class ImageDataKFold(ImageDataBase):
 
                 res.append((np.array(xs), np.array(ys)))
 
-            yield(res)
+            yield res
+
+
+class ImageDataNP(ImageDataSimpleSplit):
+
+    IMG_DIM = (224, 224, 3)
+
+    def __init__(self, img_dir, squash=False, **kwargs):
+        super().__init__(**kwargs)
+
+        self.img_dir = img_dir
+        self.squash = squash
+
+    def _get_in_dim(self):
+        return self.IMG_DIM
+
+    def _get_x(self, key):
+        fpath = os.path.join(self.img_dir, os.path.basename(key))
+        return self._open_img(fpath)
+
+    def _open_img(self, fpath):
+        print('Opening {}'.format(os.path.basename(fpath)))
+        img = cv2.imread(fpath, cv2.IMREAD_COLOR)
+        if img is None:
+            raise cv2.error('Failed to open {}'.format(os.path.basename(fpath)))
+
+        if not self.squash:
+            sq_dim = min(img.shape[0], img.shape[1])
+            yshift = int((img.shape[0] - sq_dim) / 2)
+            xshift = int((img.shape[1] - sq_dim) / 2)
+
+            yadd = img.shape[0] - (2 * sq_dim)
+            xadd = img.shape[1] - (2 * sq_dim)
+
+            img = img[yshift:(img.shape[0] - yshift - yadd), xshift:(img.shape[1] - xshift - xadd)]
+
+        return cv2.resize(img, self.IMG_DIM[:2])
+
+
+class PredictionWriter(object):
+    def __init__(self):
+        self.predictions = dict()
+
+    def add(self, key, pred, y):
+        v = {
+            'labels': pred,
+            'classification': ImageDataBase.get_class_name(y)
+        }
+        self.predictions[key] = v
+
+    def commit(self, fpath):
+        with open(fpath, 'w') as f:
+            f.write(json.dumps(self.predictions))
 

@@ -83,10 +83,13 @@ def main():
     parser = argparse.ArgumentParser(description='Totality image classifier')
     parser.add_argument('--pred-type', type=str, default='onehot')
     parser.add_argument('--pred-thresh', type=float, default=None)
+    parser.add_argument('--labeled-data', type=str, default='labeled_data.json')
+    parser.add_argument('--labels', type=str, default='labels.json')
     args = parser.parse_args()
 
     # Get data
-    dataset = ImageDataKFold(nfolds=10, one_hot=(args.pred_type == 'onehot'))
+    dataset = ImageDataKFold(nfolds=10, one_hot=(args.pred_type == 'onehot'),
+                             labels_file=args.labels, labeled_data_file=args.labeled_data)
     in_dim, out_dim = dataset.get_dim()
 
     results = list()
