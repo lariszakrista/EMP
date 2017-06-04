@@ -11,6 +11,8 @@
   - hough_param1 (double)
   - hough_param2 (double)
   - hough_min_dist (double)
+  - hough_min_radius (int)
+  - hough_max_radius (int)
 
 **Modes:**
 - `batch` mode: this will loop through all the images without stopping, 
