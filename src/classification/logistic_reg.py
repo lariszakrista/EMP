@@ -1,11 +1,10 @@
 import argparse
 import heapq
 
-from keras.models import Sequential
-from keras.layers import Dense
 import numpy as np
 
 from image_data import ImageDataKFold
+from utils import get_lr
 
 
 def print_header(h):
@@ -22,13 +21,6 @@ def print_results(acc, false_pos_ratio, accept_ratio, title):
 
 def average_weights_and_biases(w, b):
     return np.average(w, axis=0), np.average(b, axis=0)
-
-
-def get_model(in_dim, out_dim):
-    model = Sequential()
-    model.add(Dense(out_dim, input_dim=in_dim))
-    model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
-    return model
 
 
 def get_most_significant_weight_idx(weights, num=10):
@@ -79,17 +71,7 @@ def evaluate_predictions(y_true, y_pred, pred_thresh, title='Model performance')
     return acc, false_pos_ratio, accept_ratio
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Totality image classifier')
-    parser.add_argument('--pred-type', type=str, default='onehot')
-    parser.add_argument('--pred-thresh', type=float, default=None)
-    parser.add_argument('--labeled-data', type=str, default='labeled_data.json')
-    parser.add_argument('--labels', type=str, default='labels.json')
-    args = parser.parse_args()
-
-    # Get data
-    dataset = ImageDataKFold(nfolds=10, one_hot=(args.pred_type == 'onehot'),
-                             labels_file=args.labels, labeled_data_file=args.labeled_data)
+def train_and_evaluate(dataset, pred_thresh=None):
     in_dim, out_dim = dataset.get_dim()
 
     results = list()
@@ -100,7 +82,7 @@ def main():
         x_test, y_test = test
 
         # Build and train model
-        model = get_model(in_dim, out_dim)
+        model = get_lr(in_dim, out_dim)
         model.fit(x_train, y_train, nb_epoch=10)
 
         # Save weights
@@ -110,7 +92,7 @@ def main():
 
         # Test model
         y_pred = model.predict(x_test)
-        res = evaluate_predictions(y_test, y_pred, args.pred_thresh)
+        res = evaluate_predictions(y_test, y_pred, pred_thresh)
 
         results.append(res)
 
@@ -122,11 +104,28 @@ def main():
     weights, biases = average_weights_and_biases(weights, biases)
 
     # Run averaged model on all images
-    model = get_model(in_dim, out_dim)
+    model = get_lr(in_dim, out_dim)
     model.layers[0].set_weights((weights, biases))
     x_test, y_test = dataset.get_all()
     y_pred = model.predict(x_test)
-    evaluate_predictions(y_test, y_pred, args.pred_thresh, title='Results for averaged model on all images')
+    evaluate_predictions(y_test, y_pred, pred_thresh, title='Results for averaged model on all images')
+
+    return weights
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Totality image classifier')
+    parser.add_argument('--pred-type', type=str, default='onehot')
+    parser.add_argument('--pred-thresh', type=float, default=None)
+    parser.add_argument('--labeled-data', type=str, default='labeled_data.json')
+    parser.add_argument('--labels', type=str, default='labels.json')
+    args = parser.parse_args()
+
+    # Get data
+    dataset = ImageDataKFold(nfolds=10, one_hot=(args.pred_type == 'onehot'),
+                             labels_file=args.labels, labeled_data_file=args.labeled_data)
+
+    weights = train_and_evaluate(dataset, args.pred_thresh)
  
     # Print most significant weights
     top10 = get_most_significant_weight_idx(weights, 10)

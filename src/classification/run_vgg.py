@@ -1,51 +1,20 @@
 import argparse
 import json
-import os
-import subprocess
 
 from keras.applications.imagenet_utils import decode_predictions
-from keras.applications.vgg19 import VGG19
-from keras.applications.vgg16 import VGG16
 from keras.preprocessing.image import ImageDataGenerator
 
 from image_data import ImageDataNP
 from image_data import PredictionWriter
-
-
-def download_images(img_dir, label_file):
-    """
-    Downloads images to <img_dir>/images.txt.
-    Images are specified in the label_file parameter, which must
-    be a path to a json file with a dictionary in it. The dictionary
-    keys must be Google Cloud Storage urls to the images to download.
-    """
-    images = json.loads(open(label_file).read()).keys()
-
-    if not os.path.isdir(img_dir):
-        os.mkdir(img_dir)
-
-    f = open(os.path.join(img_dir, 'images.txt'), 'w+')
-    f.write('\n'.join(images))
-    f.seek(0)
-
-    subprocess.run(['gsutil', '-m', 'cp', '-I', img_dir], stdin=f)
-
-
-def get_model(cls=VGG19, include_top=True, weights=None, classes=2):
-    """
-    Returns VGG16/19 model, (depending on cls parameter)
-    """
-    model = cls(include_top=include_top, input_shape=(224, 224, 3), weights=weights, classes=classes)
-    model.compile(loss='mse', optimizer='rmsprop')
-    return model
+from utils import download_images
+from utils import get_vgg
 
 
 def get_trained_model(x_train, y_train):
     """
     Returns VGG19 model trained on x_train, y_train
     """
-    # VGG19
-    model = get_model()
+    model = get_vgg('VGG19')
 
     datagen = ImageDataGenerator(
         featurewise_center=False,           # set input mean to 0 over the dataset
@@ -104,13 +73,14 @@ def main():
     args = parser.parse_args()
 
     if args.download:
-        download_images(img_dir=args.img_dir, label_file=args.label_file)
+        with open(args.label_file) as f:
+            download_images(args.img_dir, list(json.load(f).keys()))
 
     print('Collecting dataset...')
     dataset = ImageDataNP(args.img_dir, labeled_data_file=args.label_file, train_ratio=1.0, squash=True)
     x_train, y_train = dataset.get_train()
 
-    model = get_model(cls=VGG16, weights='imagenet', classes=1000)
+    model = get_vgg('VGG16', weights='imagenet', classes=1000)
 
     writer = PredictionWriter()
     batch_size=32
@@ -128,6 +98,7 @@ def main():
         start = end
 
     writer.commit(args.output_file)
+
 
 if __name__ == '__main__':
     main()
