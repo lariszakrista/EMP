@@ -1,10 +1,66 @@
 # Totality Image Classification
 
+***Beware: This is research quality code***
 
 ## Dependencies:
 
 - Python3
 - Keras
+
+
+## `classification_pipeline.py`
+
+### Required files
+
+- Labeled data JSON file
+  - A JSON file with a top level dictionary where the keys are Google Cloud Storage
+    URLs. Each key in this dictionary must have another dictionary associated with
+    it. These dictionaries must have a `'classification'` key that points to the
+    image classification, either `'TOTALITY'` or some other string, which will be treated
+    as non-totality. Note: the labeled data json file described above will work here.
+- Image files
+  - All images referenced the labeled data JSON file
+    must be saved in the same directory with their filenames
+    being the same as the basename of the files referenced in
+
+### Arguments
+
+- `--download`
+  - Optional flag. If specified, images will be downloaded from Google Cloud Storage
+    using gsutil.
+- `--img-dir`
+  - Optional. Directory where images live / are to be downloaded to. Default `./img/`.
+- `--label-file`
+  - Optional. Labeled data JSON file described above. Default `labled_data.json`
+
+### To Run
+
+```bash
+$ mkdir img
+$
+$ python3 classification_pipeline.py --img-dir=img --download --label-file=labeled_data.json
+```
+
+### Current Model Description
+
+This image classification application is composed of a two stage pipeline. The first stage
+runs the images through VGG19, pre-trained on imagenet. The output of this stage is not the
+file 1000-dimensional softmax output from VGG19, but instead the 4096-dimensional output from
+the file fully connected layer that feeds into the final softmax.
+
+This output is then passed to the second stage of the pipeline, which trains a simple, single
+layer logistic regression classifier on the outputs from stage 1. This classifier outputs a
+one-hot vector encoding an input as being of either totality, or non-totality. This stage
+performs 10 fold cross validation training, and then runs the entire image dataset through
+a new network where the weights are set to the average of the weights from the previous 10
+training steps.
+
+**Latest metrics**
+
+Results for averaged model on all images:
+- Accuracy: 0.9694
+- False positive rate: 0.0041
+- Acceptance ratio: 1.0
 
 
 ## `logistic_reg.py`

@@ -12,16 +12,25 @@ class ImageDataBase(object):
     TOTALITY_CLS_NAME = 'TOTALITY'
     NON_TOTALITY_CLS_NAME = 'NON_TOTALITY'
 
-    def __init__(self, one_hot=True, labels_file='labels.json', labeled_data_file='labeled_data.json'):
+    def __init__(self, one_hot=True, labels_file=None, labeled_data_file=None):
         self.one_hot = one_hot
+        self.labels = None
+        self.data = None
 
         # Labels and their corresponding indices
-        self.labels = json.loads(open(labels_file).read())
+        if labels_file is not None:
+            with open(labels_file) as f:
+                self.labels = json.load(f)
 
         # Load data and record number of training examples
-        self.data = json.loads(open(labeled_data_file).read())
+        if labeled_data_file is not None:
+            with open(labeled_data_file) as f:
+                self.data = json.load(f)
 
     def get_feature_name(self, idx):
+        if self.labels is None:
+            raise ValueError('Dataset features are unnamed')
+
         for k, v in self.labels.items():
             if v == idx:
                 return k
@@ -54,6 +63,9 @@ class ImageDataBase(object):
         return self._get_in_dim(), self._get_out_dim()
 
     def _get_in_dim(self):
+        if self.labels is None:
+            raise ValueError('Input dimension not set')
+
         return len(self.labels)
 
     def _get_out_dim(self):
@@ -66,6 +78,10 @@ class ImageDataBase(object):
         return self._get_x(key), self._get_y(key)
 
     def _get_x(self, key):
+        """
+        Assumens self.labels is set. Otherwise will raise an exception. If using a subclass
+        that does not use self.labels, this method should be overridden.
+        """
         feature_vec = np.zeros(len(self.labels))
 
         for l in self.data[key]['labels']:
@@ -106,12 +122,16 @@ class ImageDataSimpleSplit(ImageDataBase):
 
 class ImageDataKFold(ImageDataBase):
 
-    def __init__(self, nfolds, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, nfolds, custom_data=None, **kwargs):
+        super().__init__(**kwargs)
 
-        # Convert entire dataset into feature vectors and 
-        # y labels
-        self.xs, self.ys = self.get_dataset(self.data.keys())
+        if custom_data is not None:
+            self.xs, self.ys = custom_data
+
+        else:
+            # Convert entire dataset into feature vectors and
+            # y labels
+            self.xs, self.ys = self.get_dataset(self.data.keys())
 
         skf = StratifiedKFold(nfolds, shuffle=True)
 
@@ -140,6 +160,9 @@ class ImageDataKFold(ImageDataBase):
                 res.append((np.array(xs), np.array(ys)))
 
             yield res
+
+    def _get_in_dim(self):
+        return self.xs[0].shape[0]
 
 
 class ImageDataNP(ImageDataSimpleSplit):
