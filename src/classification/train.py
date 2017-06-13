@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--download', default=False, action='store_true')
     parser.add_argument('--img-dir', type=str, default='img')
     parser.add_argument('--label-file', type=str, default='labeled_data.json')
+    parser.add_argument('--save', type=str, default=None)
     args = parser.parse_args()
 
     if args.download:
@@ -48,7 +49,11 @@ def main():
 
     # Logistic Regression Phase
     kfold_dataset = ImageDataKFold(nfolds=10, custom_data=(np.array(vgg_relu_out), y_train))
-    train_and_eval_lr(kfold_dataset)
+    model = train_and_eval_lr(kfold_dataset)
+
+    # Save model?
+    if args.save is not None:
+        model.save(args.save)
 
 
 if __name__ == '__main__':

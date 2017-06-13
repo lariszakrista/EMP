@@ -6,11 +6,37 @@ import cv2
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
+import constants as const
+import utils
+
+
+def _open_single_image(path, squash, dim):
+    img = cv2.imread(path, cv2.IMREAD_COLOR)
+    if img is None:
+        raise cv2.error('Failed to open {}'.format(os.path.basename(fpath)))
+
+    if not squash:
+        sq_dim = min(img.shape[0], img.shape[1])
+
+        yshift = int((img.shape[0] - sq_dim) / 2)
+        xshift = int((img.shape[1] - sq_dim) / 2)
+
+        yadd = img.shape[0] - (2 * sq_dim)
+        xadd = img.shape[1] - (2 * sq_dim)
+
+        img = img[yshift:(img.shape[0] - yshift - yadd), xshift:(img.shape[1] - xshift - xadd)]
+
+    return cv2.resize(img, dim)
+
+
+def _open_images(img_paths, squash, dim):
+    images = list()
+    for path in img_paths:
+        images.append(_open_single_image(path, squash, dim))
+    return images
+
 
 class ImageDataBase(object):
-
-    TOTALITY_CLS_NAME = 'TOTALITY'
-    NON_TOTALITY_CLS_NAME = 'NON_TOTALITY'
 
     def __init__(self, one_hot=True, labels_file=None, labeled_data_file=None):
         self.one_hot = one_hot
@@ -51,13 +77,12 @@ class ImageDataBase(object):
 
         return np.array(xs), np.array(ys)
 
-    @classmethod
-    def get_class_name(cls, y):
+    @staticmethod
+    def get_class_name(y):
         try:
-            totality = y[0] == 1
+            return utils.decode_totality_prediction(y)
         except IndexError:
-            totality = y
-        return cls.TOTALITY_CLS_NAME if totality else cls.NON_TOTALITY_CLS_NAME
+            return const.TOTALITY if y else const.NON_TOTALITY
 
     def get_dim(self):
         return self._get_in_dim(), self._get_out_dim()
@@ -91,7 +116,7 @@ class ImageDataBase(object):
         return feature_vec
 
     def _get_y(self, key):
-        totality = (self.data[key]['classification'] == self.TOTALITY_CLS_NAME)
+        totality = (self.data[key]['classification'] == const.TOTALITY)
         if self.one_hot:
             y = [int(v) for v in (totality, not totality)]
         else:
@@ -184,21 +209,7 @@ class ImageDataNP(ImageDataSimpleSplit):
 
     def _open_img(self, fpath):
         print('Opening {}'.format(os.path.basename(fpath)))
-        img = cv2.imread(fpath, cv2.IMREAD_COLOR)
-        if img is None:
-            raise cv2.error('Failed to open {}'.format(os.path.basename(fpath)))
-
-        if not self.squash:
-            sq_dim = min(img.shape[0], img.shape[1])
-            yshift = int((img.shape[0] - sq_dim) / 2)
-            xshift = int((img.shape[1] - sq_dim) / 2)
-
-            yadd = img.shape[0] - (2 * sq_dim)
-            xadd = img.shape[1] - (2 * sq_dim)
-
-            img = img[yshift:(img.shape[0] - yshift - yadd), xshift:(img.shape[1] - xshift - xadd)]
-
-        return cv2.resize(img, self.IMG_DIM[:2])
+        return _open_single_image(fpath, self.squash, self.IMG_DIM[:2])
 
 
 class PredictionWriter(object):
@@ -216,3 +227,22 @@ class PredictionWriter(object):
         with open(fpath, 'w') as f:
             f.write(json.dumps(self.predictions))
 
+
+class ImageSet(object):
+
+    def __init__(self, img_paths, squash=True, dim = (224, 224)):
+        self.img_paths = img_paths
+        self.squash = squash
+        self.dim = dim
+
+    def get_batches(self, batch_size=32):
+        start = 0
+        end = min(batch_size, len(self.img_paths))
+
+        while start < len(self.img_paths):
+            images = _open_images(self.img_paths[start:end], self.squash, self.dim)
+            yield images, start, end
+            start = end
+            end = min(end + batch_size, len(self.img_paths))
+
+        raise StopIteration
