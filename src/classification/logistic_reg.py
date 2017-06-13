@@ -110,7 +110,7 @@ def train_and_evaluate(dataset, pred_thresh=None):
     y_pred = model.predict(x_test)
     evaluate_predictions(y_test, y_pred, pred_thresh, title='Results for averaged model on all images')
 
-    return weights
+    return model
 
 
 def main():
@@ -125,8 +125,12 @@ def main():
     dataset = ImageDataKFold(nfolds=10, one_hot=(args.pred_type == 'onehot'),
                              labels_file=args.labels, labeled_data_file=args.labeled_data)
 
-    weights = train_and_evaluate(dataset, args.pred_thresh)
+    # Train / evaluate / return model
+    model = train_and_evaluate(dataset, args.pred_thresh)
  
+    # Get weights
+    weights, _ = model.layers[0].get_weights()
+
     # Print most significant weights
     top10 = get_most_significant_weight_idx(weights, 10)
     print_header('10 most significant weights (avg. of all k-fold model weights)')

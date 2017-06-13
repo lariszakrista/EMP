@@ -6,6 +6,15 @@ from keras.applications.vgg19 import VGG19
 from keras.layers import Dense
 from keras.models import Sequential
 
+import constants
+
+
+def decode_totality_prediction(pred):
+    if pred[0] > pred[1]:
+        return constants.TOTALITY
+    else:
+        return constants.NON_TOTALITY
+
 
 def download_images(img_dir, img_uris):
     """
@@ -44,4 +53,3 @@ def get_lr(in_dim, out_dim):
     model.add(Dense(out_dim, input_dim=in_dim))
     model.compile(optimizer='rmsprop', loss='mse', metrics=['accuracy'])
     return model
-
